@@ -4,5 +4,5 @@ This repository includes one pdf file and each paper's (1) do file, (2) log file
 The pdf file includes the two papers' Table and Figure, and my answer to the short essay questions.<br> <br>
 I include the Dukebox link for each paper's raw data and Intermediary data: <br>
 https://duke.box.com/s/u7yaeeqbcifk4383oxpr0dwcgala1giz
-<br>
+<br> <br>
 The write-up folder includes class 1, 2, 4 & 5 write-ups.
