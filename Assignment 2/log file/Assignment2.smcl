@@ -1,0 +1,2111 @@
+{smcl}
+{com}{sf}{ul off}{txt}{.-}
+      name:  {res}<unnamed>
+       {txt}log:  {res}C:\Users\lcyhk\Desktop\Assign2.smcl
+  {txt}log type:  {res}smcl
+ {txt}opened on:  {res}27 Feb 2024, 06:42:25
+
+{com}. ********************************************************************************
+
+. 
+. ***** Mutual fund holdings and Russell 1000/2000 index membership *****
+
+. 
+. ********************************************************************************
+
+. 
+. 
+. 
+. ***** CRSP mutual fund *****
+
+. 
+. use "C:\Users\lcyhk\Desktop\raw data\CRSP_mutual fund.dta", clear
+
+. 
+. sort crsp_fundno crsp_portno
+
+. 
+. format crsp_portno %10.0g
+
+. 
+. duplicates drop crsp_fundno, force
+
+{p 0 4}{txt}Duplicates in terms of {res} crsp_fundno{p_end}
+
+{txt}(19,154 observations deleted)
+
+{com}. 
+. 
+. 
+. * Identify whether the index fund is active or passive 
+
+. 
+. gen passive = strmatch(fund_name, "*Index*" "*Idx*" "*Indx*" "*Ind *" "*Russell*" "*S & P*" "*S and P*" "*S&P*" "*SandP*" "*SP*" "*DOW*" "*Dow*" "*DJ*" "*MSCI*" "*Bloomberg*" "*KBW*" "*NASDAQ*" "*NYSE*" "*STOXX*" "*FTSE*" "*Wilshire*" "*Morningstar*" "*100*" "*400*" "*500*" "*600*" "*900*" "*1000*" "*1500*" "*2000*" "*5000*")
+
+. 
+. replace passive = 1 if index_fund_flag != ""
+{txt}(3,941 real changes made)
+
+{com}. 
+. replace passive = 2 if passive == 0
+{txt}(52,359 real changes made)
+
+{com}. 
+. sort crsp_fundno
+
+. 
+. 
+. 
+. ***** Merge CRSP_mutual fund with MFLINK 1 *****
+
+. 
+. merge m:1 crsp_fundno using "C:\Users\lcyhk\Desktop\raw data\mflink1_raw.dta"
+{res}
+{txt}{col 5}Result{col 33}Number of obs
+{col 5}{hline 41}
+{col 5}Not matched{col 30}{res}          38,394
+{txt}{col 9}from master{col 30}{res}          35,368{txt}  (_merge==1)
+{col 9}from using{col 30}{res}           3,026{txt}  (_merge==2)
+
+{col 5}Matched{col 30}{res}          23,540{txt}  (_merge==3)
+{col 5}{hline 41}
+
+{com}. 
+. keep if _merge == 3
+{txt}(38,394 observations deleted)
+
+{com}. 
+. duplicates drop wficn, force
+
+{p 0 4}{txt}Duplicates in terms of {res} wficn{p_end}
+
+{txt}(16,410 observations deleted)
+
+{com}. 
+. keep wficn passive
+
+. 
+. save "C:\Users\lcyhk\Desktop\Intermediate data\CRSPmutual_mflink1.dta", replace
+{txt}{p 0 4 2}
+file {bf}
+C:\Users\lcyhk\Desktop\Intermediate data\CRSPmutual_mflink1.dta{rm}
+saved
+{p_end}
+
+{com}. 
+. 
+. 
+. ***** Merge with MFLINK 2 *****
+
+. 
+. use "C:\Users\lcyhk\Desktop\raw data\mflink2_raw.dta", clear
+
+. 
+. merge m:1 wficn using "C:\Users\lcyhk\Desktop\Intermediate data\CRSPmutual_mflink1.dta"
+{res}
+{txt}{col 5}Result{col 33}Number of obs
+{col 5}{hline 41}
+{col 5}Not matched{col 30}{res}         895,275
+{txt}{col 9}from master{col 30}{res}         895,271{txt}  (_merge==1)
+{col 9}from using{col 30}{res}               4{txt}  (_merge==2)
+
+{col 5}Matched{col 30}{res}         312,119{txt}  (_merge==3)
+{col 5}{hline 41}
+
+{com}. 
+. keep if _merge == 2 | _merge == 3
+{txt}(895,271 observations deleted)
+
+{com}. 
+. drop _merge
+
+. 
+. save "C:\Users\lcyhk\Desktop\Intermediate data\CRSPmutual_mflink1_mflink2.dta", replace
+{txt}{p 0 4 2}
+file {bf}
+C:\Users\lcyhk\Desktop\Intermediate data\CRSPmutual_mflink1_mflink2.dta{rm}
+saved
+{p_end}
+
+{com}. 
+. 
+. 
+. ***** Thomson Reuters S12 *****
+
+. 
+. * Used Python (filename: "populate_missingdata.ipynb") to populate missing values in S12 that are prior to year 2004 & the quarterly gap <= 2
+
+. 
+. * Data has been stored to "C:\Users\lcyhk\Desktop\raw data\S12_screened.dta"
+
+. 
+. 
+. 
+. ***** CRSP-stock *****
+
+. 
+. use "C:\Users\lcyhk\Desktop\raw data\CRSP_stock.dta", clear
+
+. 
+. rename (PERMNO NCUSIP PERMCO CUSIP PRC SHROUT CFACPR CFACSHR) (permno ncusip permco cusip prc shrout cfacpr cfacshr)
+{res}
+{com}. 
+. gen year = year(date)
+
+. 
+. gen month = month(date)
+
+. 
+. keep if inlist(month, 3, 6, 9, 12)
+{txt}(693,875 observations deleted)
+
+{com}. 
+. drop if year < 1998 | year > 2006
+{txt}(66,049 observations deleted)
+
+{com}. 
+. 
+. 
+. * Calculate market capitalization
+
+. 
+. gen share_outst = shrout * 1000
+{txt}(1,692 missing values generated)
+
+{com}. 
+. gen price = abs(prc) * cfacpr
+{txt}(9,889 missing values generated)
+
+{com}. 
+. gen market_cap = price * share_outst * cfacshr
+{txt}(9,889 missing values generated)
+
+{com}. 
+. bysort year month permco: egen co_cap = sum(market_cap)
+
+. 
+. gen cusip_merge = ncusip
+{txt}(1,370 missing values generated)
+
+{com}. 
+. drop if cusip_merge == ""
+{txt}(1,370 observations deleted)
+
+{com}. 
+. *duplicates drop cusip_merge year month, force
+
+. 
+. save "C:\Users\lcyhk\Desktop\Intermediate data\CRSP_stock.dta", replace
+{txt}{p 0 4 2}
+file {bf}
+C:\Users\lcyhk\Desktop\Intermediate data\CRSP_stock.dta{rm}
+saved
+{p_end}
+
+{com}. 
+. 
+. 
+. * Historical cusip should be related to cusip in Thomosn Reuters S12
+
+. 
+. * Merge with S12_screened file
+
+. 
+. use "C:\Users\lcyhk\Desktop\raw data\S12_screened.dta", clear
+
+. 
+. merge m:1 cusip_merge year month using "C:\Users\lcyhk\Desktop\Intermediate data\CRSP_stock.dta"
+{res}
+{txt}{col 5}Result{col 33}Number of obs
+{col 5}{hline 41}
+{col 5}Not matched{col 30}{res}       1,624,237
+{txt}{col 9}from master{col 30}{res}       1,587,231{txt}  (_merge==1)
+{col 9}from using{col 30}{res}          37,006{txt}  (_merge==2)
+
+{col 5}Matched{col 30}{res}      29,351,158{txt}  (_merge==3)
+{col 5}{hline 41}
+
+{com}. 
+. drop _merge
+
+. 
+. 
+. 
+. * Delete observations where total mutual fund holdings exceed a stock's capitalization
+
+. 
+. sort cusip year month
+
+. 
+. gen cap_stock = shares * price
+{txt}(1,661,619 missing values generated)
+
+{com}. 
+. bysort cusip_merge year month permco: egen cap_fund = total(cap_stock)
+
+. 
+. drop if cap_fund > co_cap
+{txt}(1,513,010 observations deleted)
+
+{com}. 
+. save "C:\Users\lcyhk\Desktop\Intermediate data\S12_CRSP.dta", replace
+{txt}{p 0 4 2}
+file {bf}
+C:\Users\lcyhk\Desktop\Intermediate data\S12_CRSP.dta{rm}
+saved
+{p_end}
+
+{com}. 
+. 
+. 
+. ***** Merge with S12 *****
+
+. 
+. use "C:\Users\lcyhk\Desktop\Intermediate data\CRSPmutual_mflink1_mflink2.dta", clear
+
+. 
+. gen year = year(fdate)
+{txt}(4 missing values generated)
+
+{com}. 
+. gen month = month(fdate)
+{txt}(4 missing values generated)
+
+{com}. 
+. duplicates drop fundno year month, force
+
+{p 0 4}{txt}Duplicates in terms of {res} fundno year month{p_end}
+
+{txt}(3 observations deleted)
+
+{com}. 
+. merge 1:m fundno year month using "C:\Users\lcyhk\Desktop\Intermediate data\S12_CRSP.dta"
+{res}
+{txt}{col 5}Result{col 33}Number of obs
+{col 5}{hline 41}
+{col 5}Not matched{col 30}{res}      14,744,052
+{txt}{col 9}from master{col 30}{res}         184,293{txt}  (_merge==1)
+{col 9}from using{col 30}{res}      14,559,759{txt}  (_merge==2)
+
+{col 5}Matched{col 30}{res}      14,902,626{txt}  (_merge==3)
+{col 5}{hline 41}
+
+{com}. 
+. keep if _merge == 2 | _merge == 3
+{txt}(184,293 observations deleted)
+
+{com}. 
+. replace passive = 3 if missing(passive)
+{txt}(14,559,759 real changes made)
+
+{com}. 
+. drop _merge
+
+. 
+. save "C:\Users\lcyhk\Desktop\Intermediate data\merged.dta", replace
+{txt}{p 0 4 2}
+file {bf}
+C:\Users\lcyhk\Desktop\Intermediate data\merged.dta{rm}
+saved
+{p_end}
+
+{com}. 
+. 
+. 
+. ********************************************************************************
+
+. 
+. ***** Link to Russell *****
+
+. 
+. use "C:\Users\lcyhk\Desktop\raw data\russell_all.dta", clear
+
+. 
+. tostring yearmonth, gen (newdate)
+{txt}newdate generated as {res:str3}
+
+{com}. 
+. destring newdate, replace
+{txt}newdate: all characters numeric; {res}replaced {txt}as {res}int
+
+{com}. 
+. gen year = 1998 + (newdate - 461)/12
+
+. 
+. gen month = 6
+
+. 
+. rename cusip cusip_merge
+{res}
+{com}. 
+. drop newdate
+
+. 
+. merge 1:m cusip_merge year month using "C:\Users\lcyhk\Desktop\Intermediate data\merged.dta"
+{res}
+{txt}{col 5}Result{col 33}Number of obs
+{col 5}{hline 41}
+{col 5}Not matched{col 30}{res}      23,526,745
+{txt}{col 9}from master{col 30}{res}           1,078{txt}  (_merge==1)
+{col 9}from using{col 30}{res}      23,525,667{txt}  (_merge==2)
+
+{col 5}Matched{col 30}{res}       5,936,718{txt}  (_merge==3)
+{col 5}{hline 41}
+
+{com}. 
+. *keep if inlist(month, 6, 9)
+
+. 
+. format share_outst market_cap co_cap cap_fund %20.0g
+
+. 
+. save "C:\Users\lcyhk\Desktop\Intermediate data\merged_Russell.dta", replace
+{txt}{p 0 4 2}
+file {bf}
+C:\Users\lcyhk\Desktop\Intermediate data\merged_Russell.dta{rm}
+saved
+{p_end}
+
+{com}. 
+. 
+. 
+. * Select firms in the 250 bandwidth around the cutoff between the Russell 1000 and 2000 indexes
+
+. 
+. ***** Choose firm that are bottom 250 in Russell 1000 *****
+
+. 
+. use "C:\Users\lcyhk\Desktop\Intermediate data\merged_Russell.dta", clear
+
+. 
+. keep if r2000 == 0
+{txt}(25,105,246 observations deleted)
+
+{com}. 
+. duplicates drop cusip_merge year, force
+
+{p 0 4}{txt}Duplicates in terms of {res} cusip_merge year{p_end}
+
+{txt}(4,349,234 observations deleted)
+
+{com}. 
+. gsort year adj_mrktvalue
+
+. 
+. by year: gen rank_r = _n
+
+. 
+. gen bottom_250 = rank_r <= 250  
+
+. 
+. keep if bottom_250 == 1
+{txt}(6,733 observations deleted)
+
+{com}. 
+. keep year cusip_merge r2000 bottom_250
+
+. 
+. save "C:\Users\lcyhk\Desktop\Intermediate data\bottom250.dta", replace
+{txt}{p 0 4 2}
+file {bf}
+C:\Users\lcyhk\Desktop\Intermediate data\bottom250.dta{rm}
+saved
+{p_end}
+
+{com}. 
+. 
+. 
+. ***** Choose firm that are top 250 in Russell 2000 *****
+
+. 
+. use "C:\Users\lcyhk\Desktop\Intermediate data\merged_Russell.dta", clear
+
+. 
+. keep if r2000 == 1
+{txt}(27,883,884 observations deleted)
+
+{com}. 
+. duplicates drop cusip_merge year, force
+
+{p 0 4}{txt}Duplicates in terms of {res} cusip_merge year{p_end}
+
+{txt}(1,561,577 observations deleted)
+
+{com}. 
+. gsort year -adj_mrktvalue
+
+. 
+. by year: gen rank_r = _n
+
+. 
+. gen top_250 = rank_r <= 250  
+
+. 
+. keep if top_250 == 1
+{txt}(15,752 observations deleted)
+
+{com}. 
+. keep year cusip_merge r2000 top_250
+
+. 
+. save "C:\Users\lcyhk\Desktop\Intermediate data\top250.dta", replace
+{txt}{p 0 4 2}
+file {bf}
+C:\Users\lcyhk\Desktop\Intermediate data\top250.dta{rm}
+saved
+{p_end}
+
+{com}. 
+. 
+. 
+. ***** Merge firms around the 250 bandwidth with Russell index *****
+
+. 
+. use "C:\Users\lcyhk\Desktop\Intermediate data\merged_Russell.dta", clear
+
+. 
+. drop _merge
+
+. 
+. merge m:1 cusip_merge year using "C:\Users\lcyhk\Desktop\Intermediate data\bottom250.dta"
+{res}
+{txt}{col 5}Result{col 33}Number of obs
+{col 5}{hline 41}
+{col 5}Not matched{col 30}{res}      27,943,704
+{txt}{col 9}from master{col 30}{res}      27,943,704{txt}  (_merge==1)
+{col 9}from using{col 30}{res}               0{txt}  (_merge==2)
+
+{col 5}Matched{col 30}{res}       1,519,759{txt}  (_merge==3)
+{col 5}{hline 41}
+
+{com}. 
+. drop _merge
+
+. 
+. merge m:1 cusip_merge year using "C:\Users\lcyhk\Desktop\Intermediate data\top250.dta"
+{res}
+{txt}{col 5}Result{col 33}Number of obs
+{col 5}{hline 41}
+{col 5}Not matched{col 30}{res}      28,021,758
+{txt}{col 9}from master{col 30}{res}      28,021,758{txt}  (_merge==1)
+{col 9}from using{col 30}{res}               0{txt}  (_merge==2)
+
+{col 5}Matched{col 30}{res}       1,441,705{txt}  (_merge==3)
+{col 5}{hline 41}
+
+{com}. 
+. drop _merge
+
+. 
+. keep if bottom_250 == 1 | top_250 == 1
+{txt}(26,501,999 observations deleted)
+
+{com}. 
+. save "C:\Users\lcyhk\Desktop\Intermediate data\completed.dta", replace
+{txt}{p 0 4 2}
+file {bf}
+C:\Users\lcyhk\Desktop\Intermediate data\completed.dta{rm}
+saved
+{p_end}
+
+{com}. 
+. use "C:\Users\lcyhk\Desktop\Intermediate data\completed.dta", clear
+
+. 
+. keep if month == 6
+{txt}(2,215,365 observations deleted)
+
+{com}. 
+. 
+. 
+. * % of shares outstanding held by mutual funds in September of year t
+
+. 
+. gen tot_shr = shares / (shr * cfacshr * 1000)
+{txt}(219 missing values generated)
+
+{com}. 
+. drop if missing(shares) | shares == 0
+{txt}(174 observations deleted)
+
+{com}. 
+. bysort permco year: egen total_share = sum(tot_shr)
+
+. 
+. bysort permco year: egen total_shares = max(total_share)
+
+. 
+. replace total_shares = total_shares * 100
+{txt}(745,880 real changes made)
+
+{com}. 
+. bysort permco year: egen Passive = sum(tot_shr) if passive == 1
+{txt}(575,836 missing values generated)
+
+{com}. 
+. bysort permco year: egen Passive_share = max(Passive) 
+{txt}(268 missing values generated)
+
+{com}. 
+. replace Passive_share = Passive_share * 100
+{txt}(745,612 real changes made)
+
+{com}. 
+. bysort permco year: egen Active = sum(tot_shr) if passive == 2
+{txt}(417,396 missing values generated)
+
+{com}. 
+. bysort permco year: egen Active_share = max(Active) 
+
+. 
+. replace Active_share = Active_share * 100
+{txt}(745,880 real changes made)
+
+{com}. 
+. bysort permco year: egen Unclassified = sum(tot_shr) if passive == 3
+{txt}(498,618 missing values generated)
+
+{com}. 
+. bysort permco year: egen Unclassified_share = max(Unclassified)
+{txt}(43 missing values generated)
+
+{com}. 
+. replace Unclassified_share = Unclassified_share * 100
+{txt}(745,837 real changes made)
+
+{com}. 
+. 
+. 
+. duplicates drop cusip_merge year, force
+
+{p 0 4}{txt}Duplicates in terms of {res} cusip_merge year{p_end}
+
+{txt}(741,599 observations deleted)
+
+{com}. 
+. sum total_shares Passive_share Active_share Unclassified_share
+
+{txt}    Variable {c |}        Obs        Mean    Std. dev.       Min        Max
+{hline 13}{c +}{hline 57}
+total_shares {c |}{res}      4,326    21.61255    14.50356          0   146.7181
+{txt}Passive_sh~e {c |}{res}      4,318    2.269748     2.57617          0   54.83015
+{txt}Active_share {c |}{res}      4,326    16.17546    11.40904          0    130.693
+{txt}Unclassifi~e {c |}{res}      4,323    3.173739    3.351517          0   50.02662
+
+{com}. 
+. save "C:\Users\lcyhk\Desktop\Intermediate data\mutual fund.dta", replace
+{txt}{p 0 4 2}
+file {bf}
+C:\Users\lcyhk\Desktop\Intermediate data\mutual fund.dta{rm}
+saved
+{p_end}
+
+{com}. 
+. 
+. 
+. ********************************************************************************
+
+. 
+. ***** Governance, voting, accounting, and compensation data *****
+
+. 
+. ********************************************************************************
+
+. 
+. 
+. 
+. ***** ISS-Director *****
+
+. 
+. use "C:\Users\lcyhk\Desktop\raw data\ISS_director.dta", clear
+
+. 
+. drop if CLASSIFICATION == "L"
+{txt}(19,732 observations deleted)
+
+{com}. 
+. gen year = year(MEETINGDATE)
+
+. 
+. sort CUSIP year DIRECTOR_DETAIL_ID
+
+. 
+. gen inde_dic = 0
+
+. 
+. gen tot_dic = 1
+
+. 
+. replace inde_dic = 1 if CLASSIFICATION == "I"
+{txt}(89,253 real changes made)
+
+{com}. 
+. 
+. 
+. * Calculate no. of independent directors and total directors for each firm in each year
+
+. 
+. bysort CUSIP year: egen num_inde_dic = sum(inde_dic)
+
+. 
+. bysort CUSIP year: egen num_tot_dic = sum(tot_dic)
+
+. 
+. gen independent_director = num_inde_dic / num_tot_dic * 100
+
+. 
+. rename CUSIP cusip6
+{res}
+{com}. 
+. keep cusip6 year independent_director
+
+. 
+. duplicates drop cusip6 year, force
+
+{p 0 4}{txt}Duplicates in terms of {res} cusip6 year{p_end}
+
+{txt}(101,765 observations deleted)
+
+{com}. 
+. 
+. 
+. save "C:\Users\lcyhk\Desktop\Intermediate data\independent_director.dta", replace
+{txt}{p 0 4 2}
+file {bf}
+C:\Users\lcyhk\Desktop\Intermediate data\independent_director.dta{rm}
+saved
+{p_end}
+
+{com}. 
+. 
+. 
+. ***** ISS-Governance *****
+
+. 
+. use "C:\Users\lcyhk\Desktop\raw data\iss_governance.dta", clear
+
+. 
+. rename (CN6 YEAR DUALCLASS PPILL LSPMT) (cusip6 year dualclass ppill lspmt)
+{res}
+{com}. 
+. recast int (dualclass ppill lspmt)
+
+. 
+. format %6.0g (dualclass ppill lspmt)
+
+. 
+. sort cusip6 year
+
+. 
+. 
+. 
+. * Indicator for Poison pill removal equals to 1 if a firm's poison pill is either withdrawn or allowed to expire at time t, and zero otherwise
+
+. 
+. by cusip6: gen poison_removal = 1 if ppill == 0 & ppill[_n-1] == 1
+{txt}(9,391 missing values generated)
+
+{com}. 
+. replace poison_removal = 0 if missing(poison_removal)
+{txt}(9,391 real changes made)
+
+{com}. 
+. 
+. 
+. * Indicator for Greater ability to call special meeting equals to 1 if shareholders are better able to call a special meeting at time t, and zero otherwise
+
+. 
+. by cusip6: gen greater_ability = 1 if lspmt == 0 & lspmt[_n-1] == 1
+{txt}(9,519 missing values generated)
+
+{com}. 
+. replace greater_ability = 0 if missing(greater_ability)
+{txt}(9,519 real changes made)
+
+{com}. 
+. 
+. 
+. save "C:\Users\lcyhk\Desktop\Intermediate data\iss_governance.dta", replace
+{txt}{p 0 4 2}
+file {bf}
+C:\Users\lcyhk\Desktop\Intermediate data\iss_governance.dta{rm}
+saved
+{p_end}
+
+{com}. 
+. 
+. 
+. ***** ROA *****
+
+. 
+. use "C:\Users\lcyhk\Desktop\raw data\roa.dta", clear
+
+. 
+. gen cusip8 = substr(cusip,1,8)
+{txt}(13 missing values generated)
+
+{com}. 
+. gen year = year(datadate)
+
+. 
+. drop if missing(ni) | missing(at)
+{txt}(10,080 observations deleted)
+
+{com}. 
+. gen roa = ni / at
+{txt}(396 missing values generated)
+
+{com}. 
+. winsor roa, gen(ROA) p(0.01)
+
+. 
+. duplicates drop cusip8 year, force
+
+{p 0 4}{txt}Duplicates in terms of {res} cusip8 year{p_end}
+
+{txt}(213 observations deleted)
+
+{com}. 
+. keep cusip cusip8 year ROA 
+
+. 
+. rename cusip8 cusip_merge
+{res}
+{com}. 
+. save "C:\Users\lcyhk\Desktop\Processed_data\roa.dta", replace
+{txt}{p 0 4 2}
+file {bf}
+C:\Users\lcyhk\Desktop\Processed_data\roa.dta{rm}
+saved
+{p_end}
+
+{com}. 
+. 
+. 
+. ********************************************************************************
+
+. 
+. ***** Merge the above data with the main dataset *****
+
+. 
+. use "C:\Users\lcyhk\Desktop\Intermediate data\mutual fund.dta", clear
+
+. 
+. merge m:1 cusip6 year using "C:\Users\lcyhk\Desktop\Intermediate data\independent_director.dta"
+{res}
+{txt}{col 5}Result{col 33}Number of obs
+{col 5}{hline 41}
+{col 5}Not matched{col 30}{res}          13,540
+{txt}{col 9}from master{col 30}{res}           1,743{txt}  (_merge==1)
+{col 9}from using{col 30}{res}          11,797{txt}  (_merge==2)
+
+{col 5}Matched{col 30}{res}           2,583{txt}  (_merge==3)
+{col 5}{hline 41}
+
+{com}. 
+. drop if _merge == 2
+{txt}(11,797 observations deleted)
+
+{com}. 
+. drop _merge
+
+. 
+. 
+. 
+. merge m:1 cusip6 year using "C:\Users\lcyhk\Desktop\Intermediate data\iss_governance.dta"
+{res}{txt}{p 0 7 2}
+(variable
+{bf:cusip6} was {bf:str6}, now {bf:str8} to accommodate using data's values)
+{p_end}
+{p 0 7 2}
+(variable
+{bf:year} was {bf:float}, now {bf:double} to accommodate using data's values)
+{p_end}
+
+{col 5}Result{col 33}Number of obs
+{col 5}{hline 41}
+{col 5}Not matched{col 30}{res}          10,445
+{txt}{col 9}from master{col 30}{res}           2,599{txt}  (_merge==1)
+{col 9}from using{col 30}{res}           7,846{txt}  (_merge==2)
+
+{col 5}Matched{col 30}{res}           1,727{txt}  (_merge==3)
+{col 5}{hline 41}
+
+{com}. 
+. drop if _merge == 2
+{txt}(7,846 observations deleted)
+
+{com}. 
+. drop _merge
+
+. 
+. 
+. 
+. merge m:1 cusip_merge year using "C:\Users\lcyhk\Desktop\Processed_data\roa.dta"
+{res}{txt}{p 0 7 2}
+(variable
+{bf:cusip} was {bf:str8}, now {bf:str10} to accommodate using data's values)
+{p_end}
+
+{col 5}Result{col 33}Number of obs
+{col 5}{hline 41}
+{col 5}Not matched{col 30}{res}          92,138
+{txt}{col 9}from master{col 30}{res}           1,282{txt}  (_merge==1)
+{col 9}from using{col 30}{res}          90,856{txt}  (_merge==2)
+
+{col 5}Matched{col 30}{res}           3,044{txt}  (_merge==3)
+{col 5}{hline 41}
+
+{com}. 
+. drop if _merge == 2
+{txt}(90,856 observations deleted)
+
+{com}. 
+. 
+. 
+. save "C:\Users\lcyhk\Desktop\Processed_data\main data.dta", replace
+{txt}{p 0 4 2}
+file {bf}
+C:\Users\lcyhk\Desktop\Processed_data\main data.dta{rm}
+saved
+{p_end}
+
+{com}. 
+. 
+. 
+. ********************************************************************************
+
+. 
+. ***** Table 1 *****
+
+. 
+. 
+. 
+. tabstat total_shares Passive_share Active_share Unclassified_share independent_director poison_removal greater_ability dualclass ROA, stats(n mean median sd) c(s) f(%10.3f)
+
+{txt}{ralign 12:Variable} {...}
+{c |}          N       Mean        p50         SD
+{hline 13}{c +}{hline 44}
+{ralign 12:total_shares} {...}
+{c |}{...}
+ {res}  4326.000     21.613     19.260     14.504
+{txt}{ralign 12:Passive_sh~e} {...}
+{c |}{...}
+ {res}  4318.000      2.270      1.524      2.576
+{txt}{ralign 12:Active_share} {...}
+{c |}{...}
+ {res}  4326.000     16.175     14.250     11.409
+{txt}{ralign 12:Unclassifi~e} {...}
+{c |}{...}
+ {res}  4323.000      3.174      2.277      3.352
+{txt}{ralign 12:independen~r} {...}
+{c |}{...}
+ {res}  2583.000     74.955     80.000     14.509
+{txt}{ralign 12:poison_rem~l} {...}
+{c |}{...}
+ {res}  1727.000      0.014      0.000      0.119
+{txt}{ralign 12:greater_ab~y} {...}
+{c |}{...}
+ {res}  1727.000      0.006      0.000      0.076
+{txt}{ralign 12:dualclass} {...}
+{c |}{...}
+ {res}  1727.000      0.130      0.000      0.337
+{txt}{ralign 12:ROA} {...}
+{c |}{...}
+ {res}  3044.000      0.034      0.040      0.151
+{txt}{hline 13}{c BT}{hline 44}
+
+{com}. 
+. 
+. 
+. ********************************************************************************
+
+. 
+. ***** Table 2 *****
+
+. 
+. use "C:\Users\lcyhk\Desktop\Intermediate data\main data.dta", clear
+
+. 
+. 
+. 
+. rename co_cap mktcap
+{res}
+{com}. 
+. gen lnmktcap = ln(mktcap)
+{txt}(173 missing values generated)
+
+{com}. 
+. gen lnmktcap2 = lnmktcap^2
+{txt}(173 missing values generated)
+
+{com}. 
+. gen lnmktcap3 = lnmktcap^3
+{txt}(173 missing values generated)
+
+{com}. 
+. gen lnfloat = ln(adj_mrktvalue)
+
+. 
+. 
+. 
+. replace total_share = total_share * 100
+{txt}(4,325 real changes made)
+
+{com}. 
+. replace Passive = Passive * 100
+{txt}(1,024 real changes made)
+
+{com}. 
+. replace Active = Active * 100
+{txt}(1,918 real changes made)
+
+{com}. 
+. replace Unclassified = Unclassified * 100
+{txt}(1,383 real changes made)
+
+{com}. 
+. 
+. 
+. replace total_share = 0 if missing(total_share)
+{txt}(0 real changes made)
+
+{com}. 
+. replace Passive = 0 if missing(Passive)
+{txt}(3,475 real changes made)
+
+{com}. 
+. replace Active = 0 if missing(Active)
+{txt}(2,582 real changes made)
+
+{com}. 
+. replace Unclassified = 0 if missing(Unclassified)
+{txt}(3,115 real changes made)
+
+{com}. 
+. 
+. 
+. * Column (1)
+
+. 
+. reghdfe total_shares r2000 lnmktcap lnmktcap2 lnmktcap3 lnfloat i.year, vce(cluster cusip_merge)
+{res}{txt}({browse "http://scorreia.com/research/hdfe.pdf":MWFE estimator} converged in 1 iterations)
+{res}
+{txt}HDFE Linear regression{col 51}Number of obs{col 67}= {res}     4,327
+{txt}Absorbing 1 HDFE group{col 51}F({res}  13{txt},{res}   1735{txt}){col 67}= {res}    128.51
+{txt}Statistics robust to heteroskedasticity{col 51}Prob > F{col 67}= {res}    0.0000
+{txt}{col 51}R-squared{col 67}= {res}    0.4606
+{txt}{col 51}Adj R-squared{col 67}= {res}    0.4590
+{txt}{col 51}Within R-sq.{col 67}= {res}    0.4606
+{txt}{col 1}Number of clusters ({res}cusip_merge{txt}) {col 30}= {res}     1,736{txt}{col 51}Root MSE{col 67}= {res}   10.6696
+
+{txt}{ralign 78:(Std. err. adjusted for {res:1,736} clusters in {res:cusip_merge})}
+{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}total_shares{col 14}{c |} Coefficient{col 26}  std. err.{col 38}      t{col 46}   P>|t|{col 54}     [95% con{col 67}f. interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 7}r2000 {c |}{col 14}{res}{space 2} 1.776031{col 26}{space 2} .3980729{col 37}{space 1}    4.46{col 46}{space 3}0.000{col 54}{space 4} .9952779{col 67}{space 3} 2.556784
+{txt}{space 4}lnmktcap {c |}{col 14}{res}{space 2} 9.700081{col 26}{space 2} 32.79669{col 37}{space 1}    0.30{col 46}{space 3}0.767{col 54}{space 4}-54.62513{col 67}{space 3} 74.02529
+{txt}{space 3}lnmktcap2 {c |}{col 14}{res}{space 2}-1.313513{col 26}{space 2}  1.49373{col 37}{space 1}   -0.88{col 46}{space 3}0.379{col 54}{space 4}-4.243214{col 67}{space 3} 1.616188
+{txt}{space 3}lnmktcap3 {c |}{col 14}{res}{space 2} .0282668{col 26}{space 2} .0226564{col 37}{space 1}    1.25{col 46}{space 3}0.212{col 54}{space 4}  -.01617{col 67}{space 3} .0727036
+{txt}{space 5}lnfloat {c |}{col 14}{res}{space 2} 10.19482{col 26}{space 2} .6109196{col 37}{space 1}   16.69{col 46}{space 3}0.000{col 54}{space 4}   8.9966{col 67}{space 3} 11.39303
+{txt}{space 12} {c |}
+{space 8}year {c |}
+{space 7}1999  {c |}{col 14}{res}{space 2} .1348497{col 26}{space 2} .5152701{col 37}{space 1}    0.26{col 46}{space 3}0.794{col 54}{space 4}-.8757662{col 67}{space 3} 1.145466
+{txt}{space 7}2000  {c |}{col 14}{res}{space 2}-.0304554{col 26}{space 2} .6385519{col 37}{space 1}   -0.05{col 46}{space 3}0.962{col 54}{space 4}-1.282868{col 67}{space 3} 1.221957
+{txt}{space 7}2001  {c |}{col 14}{res}{space 2} .9955055{col 26}{space 2} .6219303{col 37}{space 1}    1.60{col 46}{space 3}0.110{col 54}{space 4}-.2243064{col 67}{space 3} 2.215317
+{txt}{space 7}2002  {c |}{col 14}{res}{space 2} 4.290491{col 26}{space 2} .6295705{col 37}{space 1}    6.81{col 46}{space 3}0.000{col 54}{space 4} 3.055695{col 67}{space 3} 5.525288
+{txt}{space 7}2003  {c |}{col 14}{res}{space 2} 3.855797{col 26}{space 2} .6094116{col 37}{space 1}    6.33{col 46}{space 3}0.000{col 54}{space 4} 2.660538{col 67}{space 3} 5.051055
+{txt}{space 7}2004  {c |}{col 14}{res}{space 2} 7.562048{col 26}{space 2}  .643114{col 37}{space 1}   11.76{col 46}{space 3}0.000{col 54}{space 4} 6.300688{col 67}{space 3} 8.823408
+{txt}{space 7}2005  {c |}{col 14}{res}{space 2} 8.487998{col 26}{space 2} .6783393{col 37}{space 1}   12.51{col 46}{space 3}0.000{col 54}{space 4} 7.157549{col 67}{space 3} 9.818447
+{txt}{space 7}2006  {c |}{col 14}{res}{space 2} 8.881258{col 26}{space 2} .7183762{col 37}{space 1}   12.36{col 46}{space 3}0.000{col 54}{space 4} 7.472284{col 67}{space 3} 10.29023
+{txt}{space 12} {c |}
+{space 7}_cons {c |}{col 14}{res}{space 2}-8.224336{col 26}{space 2} 240.7059{col 37}{space 1}   -0.03{col 46}{space 3}0.973{col 54}{space 4}-480.3285{col 67}{space 3} 463.8799
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+
+{com}. 
+. * Column (2)
+
+. 
+. reghdfe Passive_share r2000 lnmktcap lnmktcap2 lnmktcap3 lnfloat i.year, vce(cluster cusip_merge)
+{res}{txt}({browse "http://scorreia.com/research/hdfe.pdf":MWFE estimator} converged in 1 iterations)
+{res}
+{txt}HDFE Linear regression{col 51}Number of obs{col 67}= {res}     4,317
+{txt}Absorbing 1 HDFE group{col 51}F({res}  13{txt},{res}   1729{txt}){col 67}= {res}    168.88
+{txt}Statistics robust to heteroskedasticity{col 51}Prob > F{col 67}= {res}    0.0000
+{txt}{col 51}R-squared{col 67}= {res}    0.5618
+{txt}{col 51}Adj R-squared{col 67}= {res}    0.5604
+{txt}{col 51}Within R-sq.{col 67}= {res}    0.5618
+{txt}{col 1}Number of clusters ({res}cusip_merge{txt}) {col 30}= {res}     1,730{txt}{col 51}Root MSE{col 67}= {res}    1.7080
+
+{txt}{ralign 78:(Std. err. adjusted for {res:1,730} clusters in {res:cusip_merge})}
+{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}Passive_sh~e{col 14}{c |} Coefficient{col 26}  std. err.{col 38}      t{col 46}   P>|t|{col 54}     [95% con{col 67}f. interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 7}r2000 {c |}{col 14}{res}{space 2} .5142683{col 26}{space 2} .0688205{col 37}{space 1}    7.47{col 46}{space 3}0.000{col 54}{space 4} .3792881{col 67}{space 3} .6492484
+{txt}{space 4}lnmktcap {c |}{col 14}{res}{space 2}-23.62937{col 26}{space 2} 5.303354{col 37}{space 1}   -4.46{col 46}{space 3}0.000{col 54}{space 4}-34.03104{col 67}{space 3}-13.22771
+{txt}{space 3}lnmktcap2 {c |}{col 14}{res}{space 2} .8638686{col 26}{space 2} .2163759{col 37}{space 1}    3.99{col 46}{space 3}0.000{col 54}{space 4} .4394824{col 67}{space 3} 1.288255
+{txt}{space 3}lnmktcap3 {c |}{col 14}{res}{space 2}-.0104523{col 26}{space 2} .0029326{col 37}{space 1}   -3.56{col 46}{space 3}0.000{col 54}{space 4}-.0162041{col 67}{space 3}-.0047005
+{txt}{space 5}lnfloat {c |}{col 14}{res}{space 2} 1.335456{col 26}{space 2} .1085065{col 37}{space 1}   12.31{col 46}{space 3}0.000{col 54}{space 4} 1.122638{col 67}{space 3} 1.548274
+{txt}{space 12} {c |}
+{space 8}year {c |}
+{space 7}1999  {c |}{col 14}{res}{space 2}-.0259759{col 26}{space 2} .0578887{col 37}{space 1}   -0.45{col 46}{space 3}0.654{col 54}{space 4}-.1395152{col 67}{space 3} .0875634
+{txt}{space 7}2000  {c |}{col 14}{res}{space 2}  .132104{col 26}{space 2} .0677116{col 37}{space 1}    1.95{col 46}{space 3}0.051{col 54}{space 4}-.0007014{col 67}{space 3} .2649093
+{txt}{space 7}2001  {c |}{col 14}{res}{space 2} .6669729{col 26}{space 2} .0783966{col 37}{space 1}    8.51{col 46}{space 3}0.000{col 54}{space 4} .5132106{col 67}{space 3} .8207351
+{txt}{space 7}2002  {c |}{col 14}{res}{space 2} 1.513448{col 26}{space 2} .0810296{col 37}{space 1}   18.68{col 46}{space 3}0.000{col 54}{space 4} 1.354522{col 67}{space 3} 1.672374
+{txt}{space 7}2003  {c |}{col 14}{res}{space 2} 1.943712{col 26}{space 2} .0797639{col 37}{space 1}   24.37{col 46}{space 3}0.000{col 54}{space 4} 1.787268{col 67}{space 3} 2.100156
+{txt}{space 7}2004  {c |}{col 14}{res}{space 2} 2.425552{col 26}{space 2} .0984134{col 37}{space 1}   24.65{col 46}{space 3}0.000{col 54}{space 4} 2.232531{col 67}{space 3} 2.618574
+{txt}{space 7}2005  {c |}{col 14}{res}{space 2} 2.998821{col 26}{space 2}  .132291{col 37}{space 1}   22.67{col 46}{space 3}0.000{col 54}{space 4} 2.739353{col 67}{space 3} 3.258288
+{txt}{space 7}2006  {c |}{col 14}{res}{space 2} 3.475817{col 26}{space 2} .1136079{col 37}{space 1}   30.59{col 46}{space 3}0.000{col 54}{space 4} 3.252993{col 67}{space 3}  3.69864
+{txt}{space 12} {c |}
+{space 7}_cons {c |}{col 14}{res}{space 2}  194.274{col 26}{space 2} 42.57261{col 37}{space 1}    4.56{col 46}{space 3}0.000{col 54}{space 4} 110.7748{col 67}{space 3} 277.7733
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+
+{com}. 
+. * Column (3)
+
+. 
+. reghdfe Active r2000 lnmktcap lnmktcap2 lnmktcap3 lnfloat i.year, vce(cluster cusip_merge)
+{res}{txt}({browse "http://scorreia.com/research/hdfe.pdf":MWFE estimator} converged in 1 iterations)
+{res}
+{txt}HDFE Linear regression{col 51}Number of obs{col 67}= {res}     4,327
+{txt}Absorbing 1 HDFE group{col 51}F({res}  13{txt},{res}   1735{txt}){col 67}= {res}     25.14
+{txt}Statistics robust to heteroskedasticity{col 51}Prob > F{col 67}= {res}    0.0000
+{txt}{col 51}R-squared{col 67}= {res}    0.0657
+{txt}{col 51}Adj R-squared{col 67}= {res}    0.0628
+{txt}{col 51}Within R-sq.{col 67}= {res}    0.0657
+{txt}{col 1}Number of clusters ({res}cusip_merge{txt}) {col 30}= {res}     1,736{txt}{col 51}Root MSE{col 67}= {res}   10.8978
+
+{txt}{ralign 78:(Std. err. adjusted for {res:1,736} clusters in {res:cusip_merge})}
+{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}      Active{col 14}{c |} Coefficient{col 26}  std. err.{col 38}      t{col 46}   P>|t|{col 54}     [95% con{col 67}f. interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 7}r2000 {c |}{col 14}{res}{space 2} .6344042{col 26}{space 2} .3436854{col 37}{space 1}    1.85{col 46}{space 3}0.065{col 54}{space 4}-.0396771{col 67}{space 3} 1.308486
+{txt}{space 4}lnmktcap {c |}{col 14}{res}{space 2} 20.69157{col 26}{space 2} 17.66338{col 37}{space 1}    1.17{col 46}{space 3}0.242{col 54}{space 4}-13.95218{col 67}{space 3} 55.33532
+{txt}{space 3}lnmktcap2 {c |}{col 14}{res}{space 2}-1.121372{col 26}{space 2} .7679445{col 37}{space 1}   -1.46{col 46}{space 3}0.144{col 54}{space 4}-2.627566{col 67}{space 3} .3848222
+{txt}{space 3}lnmktcap3 {c |}{col 14}{res}{space 2}  .018176{col 26}{space 2} .0111149{col 37}{space 1}    1.64{col 46}{space 3}0.102{col 54}{space 4}-.0036239{col 67}{space 3}  .039976
+{txt}{space 5}lnfloat {c |}{col 14}{res}{space 2} 3.047352{col 26}{space 2} .4213907{col 37}{space 1}    7.23{col 46}{space 3}0.000{col 54}{space 4} 2.220865{col 67}{space 3} 3.873839
+{txt}{space 12} {c |}
+{space 8}year {c |}
+{space 7}1999  {c |}{col 14}{res}{space 2}-.3522849{col 26}{space 2} .5651816{col 37}{space 1}   -0.62{col 46}{space 3}0.533{col 54}{space 4}-1.460794{col 67}{space 3}  .756224
+{txt}{space 7}2000  {c |}{col 14}{res}{space 2}-.0608117{col 26}{space 2} .6139312{col 37}{space 1}   -0.10{col 46}{space 3}0.921{col 54}{space 4}-1.264935{col 67}{space 3} 1.143311
+{txt}{space 7}2001  {c |}{col 14}{res}{space 2}-.3467033{col 26}{space 2}  .619008{col 37}{space 1}   -0.56{col 46}{space 3}0.575{col 54}{space 4}-1.560784{col 67}{space 3}  .867377
+{txt}{space 7}2002  {c |}{col 14}{res}{space 2} .6058348{col 26}{space 2} .6390991{col 37}{space 1}    0.95{col 46}{space 3}0.343{col 54}{space 4}-.6476508{col 67}{space 3}  1.85932
+{txt}{space 7}2003  {c |}{col 14}{res}{space 2} 1.544216{col 26}{space 2} .6605317{col 37}{space 1}    2.34{col 46}{space 3}0.020{col 54}{space 4}  .248694{col 67}{space 3} 2.839738
+{txt}{space 7}2004  {c |}{col 14}{res}{space 2} .6448323{col 26}{space 2} .6749519{col 37}{space 1}    0.96{col 46}{space 3}0.340{col 54}{space 4}-.6789727{col 67}{space 3} 1.968637
+{txt}{space 7}2005  {c |}{col 14}{res}{space 2} 1.125043{col 26}{space 2} .7056682{col 37}{space 1}    1.59{col 46}{space 3}0.111{col 54}{space 4}-.2590063{col 67}{space 3} 2.509093
+{txt}{space 7}2006  {c |}{col 14}{res}{space 2} 2.454225{col 26}{space 2} .7704515{col 37}{space 1}    3.19{col 46}{space 3}0.001{col 54}{space 4} .9431137{col 67}{space 3} 3.965337
+{txt}{space 12} {c |}
+{space 7}_cons {c |}{col 14}{res}{space 2}-143.2355{col 26}{space 2} 134.7272{col 37}{space 1}   -1.06{col 46}{space 3}0.288{col 54}{space 4}-407.4803{col 67}{space 3} 121.0094
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+
+{com}. 
+. * Column (4)
+
+. 
+. reghdfe Unclassified r2000 lnmktcap lnmktcap2 lnmktcap3 lnfloat i.year, vce(cluster cusip_merge)
+{res}{txt}({browse "http://scorreia.com/research/hdfe.pdf":MWFE estimator} converged in 1 iterations)
+{res}
+{txt}HDFE Linear regression{col 51}Number of obs{col 67}= {res}     4,327
+{txt}Absorbing 1 HDFE group{col 51}F({res}  13{txt},{res}   1735{txt}){col 67}= {res}     14.52
+{txt}Statistics robust to heteroskedasticity{col 51}Prob > F{col 67}= {res}    0.0000
+{txt}{col 51}R-squared{col 67}= {res}    0.0729
+{txt}{col 51}Adj R-squared{col 67}= {res}    0.0701
+{txt}{col 51}Within R-sq.{col 67}= {res}    0.0729
+{txt}{col 1}Number of clusters ({res}cusip_merge{txt}) {col 30}= {res}     1,736{txt}{col 51}Root MSE{col 67}= {res}    2.5606
+
+{txt}{ralign 78:(Std. err. adjusted for {res:1,736} clusters in {res:cusip_merge})}
+{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}Unclassified{col 14}{c |} Coefficient{col 26}  std. err.{col 38}      t{col 46}   P>|t|{col 54}     [95% con{col 67}f. interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 7}r2000 {c |}{col 14}{res}{space 2}-.1006436{col 26}{space 2}  .084717{col 37}{space 1}   -1.19{col 46}{space 3}0.235{col 54}{space 4}-.2668018{col 67}{space 3} .0655145
+{txt}{space 4}lnmktcap {c |}{col 14}{res}{space 2}-6.008319{col 26}{space 2} 6.402817{col 37}{space 1}   -0.94{col 46}{space 3}0.348{col 54}{space 4}-18.56637{col 67}{space 3} 6.549732
+{txt}{space 3}lnmktcap2 {c |}{col 14}{res}{space 2} .1796175{col 26}{space 2} .2708883{col 37}{space 1}    0.66{col 46}{space 3}0.507{col 54}{space 4}-.3516843{col 67}{space 3} .7109194
+{txt}{space 3}lnmktcap3 {c |}{col 14}{res}{space 2}-.0016271{col 26}{space 2} .0038048{col 37}{space 1}   -0.43{col 46}{space 3}0.669{col 54}{space 4}-.0090895{col 67}{space 3} .0058354
+{txt}{space 5}lnfloat {c |}{col 14}{res}{space 2} .7653583{col 26}{space 2} .1038791{col 37}{space 1}    7.37{col 46}{space 3}0.000{col 54}{space 4} .5616168{col 67}{space 3} .9690997
+{txt}{space 12} {c |}
+{space 8}year {c |}
+{space 7}1999  {c |}{col 14}{res}{space 2} .2393005{col 26}{space 2} .1342707{col 37}{space 1}    1.78{col 46}{space 3}0.075{col 54}{space 4}-.0240489{col 67}{space 3}   .50265
+{txt}{space 7}2000  {c |}{col 14}{res}{space 2}-.0834261{col 26}{space 2} .1363339{col 37}{space 1}   -0.61{col 46}{space 3}0.541{col 54}{space 4}-.3508222{col 67}{space 3}   .18397
+{txt}{space 7}2001  {c |}{col 14}{res}{space 2}  .063979{col 26}{space 2} .1540124{col 37}{space 1}    0.42{col 46}{space 3}0.678{col 54}{space 4}-.2380905{col 67}{space 3} .3660485
+{txt}{space 7}2002  {c |}{col 14}{res}{space 2} .1207285{col 26}{space 2} .1551733{col 37}{space 1}    0.78{col 46}{space 3}0.437{col 54}{space 4}-.1836179{col 67}{space 3} .4250749
+{txt}{space 7}2003  {c |}{col 14}{res}{space 2} -.389099{col 26}{space 2} .1244951{col 37}{space 1}   -3.13{col 46}{space 3}0.002{col 54}{space 4}-.6332753{col 67}{space 3}-.1449227
+{txt}{space 7}2004  {c |}{col 14}{res}{space 2} .5862903{col 26}{space 2} .1739579{col 37}{space 1}    3.37{col 46}{space 3}0.001{col 54}{space 4}  .245101{col 67}{space 3} .9274796
+{txt}{space 7}2005  {c |}{col 14}{res}{space 2} .2161142{col 26}{space 2} .1545809{col 37}{space 1}    1.40{col 46}{space 3}0.162{col 54}{space 4}-.0870704{col 67}{space 3} .5192988
+{txt}{space 7}2006  {c |}{col 14}{res}{space 2}-.3619641{col 26}{space 2} .1304814{col 37}{space 1}   -2.77{col 46}{space 3}0.006{col 54}{space 4}-.6178815{col 67}{space 3}-.1060466
+{txt}{space 12} {c |}
+{space 7}_cons {c |}{col 14}{res}{space 2} 52.67575{col 26}{space 2} 49.77179{col 37}{space 1}    1.06{col 46}{space 3}0.290{col 54}{space 4}-44.94327{col 67}{space 3} 150.2948
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+
+{com}. 
+. 
+. 
+. ********************************************************************************
+
+. 
+. ***** Table 3 *****
+
+. 
+. egen passive_sd = sd(passive)
+
+. 
+. gen passive_y = passive / passive_sd
+{txt}(172 missing values generated)
+
+{com}. 
+. 
+. 
+. * Column (1)
+
+. 
+. reghdfe passive_y r2000 lnmktcap lnfloat, absorb(year) vce(cluster cusip_merge)
+{res}{txt}({browse "http://scorreia.com/research/hdfe.pdf":MWFE estimator} converged in 1 iterations)
+{res}
+{txt}HDFE Linear regression{col 51}Number of obs{col 67}= {res}     4,327
+{txt}Absorbing 1 HDFE group{col 51}F({res}   3{txt},{res}   1735{txt}){col 67}= {res}      4.90
+{txt}Statistics robust to heteroskedasticity{col 51}Prob > F{col 67}= {res}    0.0022
+{txt}{col 51}R-squared{col 67}= {res}    0.0193
+{txt}{col 51}Adj R-squared{col 67}= {res}    0.0168
+{txt}{col 51}Within R-sq.{col 67}= {res}    0.0034
+{txt}{col 1}Number of clusters ({res}cusip_merge{txt}) {col 30}= {res}     1,736{txt}{col 51}Root MSE{col 67}= {res}    0.9914
+
+{txt}{ralign 78:(Std. err. adjusted for {res:1,736} clusters in {res:cusip_merge})}
+{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}   passive_y{col 14}{c |} Coefficient{col 26}  std. err.{col 38}      t{col 46}   P>|t|{col 54}     [95% con{col 67}f. interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 7}r2000 {c |}{col 14}{res}{space 2}-.1070033{col 26}{space 2} .0306661{col 37}{space 1}   -3.49{col 46}{space 3}0.000{col 54}{space 4}-.1671498{col 67}{space 3}-.0468569
+{txt}{space 4}lnmktcap {c |}{col 14}{res}{space 2}-.0055892{col 26}{space 2} .0140453{col 37}{space 1}   -0.40{col 46}{space 3}0.691{col 54}{space 4}-.0331366{col 67}{space 3} .0219583
+{txt}{space 5}lnfloat {c |}{col 14}{res}{space 2} .0685994{col 26}{space 2} .0408989{col 37}{space 1}    1.68{col 46}{space 3}0.094{col 54}{space 4} -.011617{col 67}{space 3} .1488157
+{txt}{space 7}_cons {c |}{col 14}{res}{space 2} 2.023018{col 26}{space 2} .5773965{col 37}{space 1}    3.50{col 46}{space 3}0.000{col 54}{space 4} .8905515{col 67}{space 3} 3.155484
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{res}
+{txt}Absorbed degrees of freedom:
+{res}{col 1}{text}{hline 13}{c TT}{hline 12}{hline 12}{hline 14}{hline 1}{c TRC}
+{col 1}{text} Absorbed FE{col 14}{c |} Categories{col 27} - Redundant{col 39}  = Num. Coefs{col 54}{c |}
+{res}{col 1}{text}{hline 13}{c +}{hline 12}{hline 12}{hline 14}{hline 1}{c RT}
+{col 1}{text}        year{col 14}{c |}{space 1}        9{col 27}{space 1}        0{col 39}{result}{space 1}        9{col 53}{text} {col 54}{c |}
+{res}{col 1}{text}{hline 13}{c BT}{hline 12}{hline 12}{hline 14}{hline 1}{c BRC}
+{res}
+{com}. 
+. * Column (2)
+
+. 
+. reghdfe passive_y r2000 lnmktcap lnmktcap2 lnfloat, absorb(year) vce(cluster cusip_merge)
+{res}{txt}({browse "http://scorreia.com/research/hdfe.pdf":MWFE estimator} converged in 1 iterations)
+{res}
+{txt}HDFE Linear regression{col 51}Number of obs{col 67}= {res}     4,327
+{txt}Absorbing 1 HDFE group{col 51}F({res}   4{txt},{res}   1735{txt}){col 67}= {res}      3.93
+{txt}Statistics robust to heteroskedasticity{col 51}Prob > F{col 67}= {res}    0.0035
+{txt}{col 51}R-squared{col 67}= {res}    0.0196
+{txt}{col 51}Adj R-squared{col 67}= {res}    0.0169
+{txt}{col 51}Within R-sq.{col 67}= {res}    0.0038
+{txt}{col 1}Number of clusters ({res}cusip_merge{txt}) {col 30}= {res}     1,736{txt}{col 51}Root MSE{col 67}= {res}    0.9914
+
+{txt}{ralign 78:(Std. err. adjusted for {res:1,736} clusters in {res:cusip_merge})}
+{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}   passive_y{col 14}{c |} Coefficient{col 26}  std. err.{col 38}      t{col 46}   P>|t|{col 54}     [95% con{col 67}f. interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 7}r2000 {c |}{col 14}{res}{space 2}-.1070597{col 26}{space 2} .0306567{col 37}{space 1}   -3.49{col 46}{space 3}0.000{col 54}{space 4}-.1671876{col 67}{space 3}-.0469318
+{txt}{space 4}lnmktcap {c |}{col 14}{res}{space 2}-.2047225{col 26}{space 2} .1726689{col 37}{space 1}   -1.19{col 46}{space 3}0.236{col 54}{space 4}-.5433835{col 67}{space 3} .1339386
+{txt}{space 3}lnmktcap2 {c |}{col 14}{res}{space 2} .0045174{col 26}{space 2} .0039257{col 37}{space 1}    1.15{col 46}{space 3}0.250{col 54}{space 4}-.0031822{col 67}{space 3}  .012217
+{txt}{space 5}lnfloat {c |}{col 14}{res}{space 2} .0708591{col 26}{space 2} .0409079{col 37}{space 1}    1.73{col 46}{space 3}0.083{col 54}{space 4}-.0093748{col 67}{space 3}  .151093
+{txt}{space 7}_cons {c |}{col 14}{res}{space 2} 4.178193{col 26}{space 2} 1.945897{col 37}{space 1}    2.15{col 46}{space 3}0.032{col 54}{space 4} .3616439{col 67}{space 3} 7.994743
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{res}
+{txt}Absorbed degrees of freedom:
+{res}{col 1}{text}{hline 13}{c TT}{hline 12}{hline 12}{hline 14}{hline 1}{c TRC}
+{col 1}{text} Absorbed FE{col 14}{c |} Categories{col 27} - Redundant{col 39}  = Num. Coefs{col 54}{c |}
+{res}{col 1}{text}{hline 13}{c +}{hline 12}{hline 12}{hline 14}{hline 1}{c RT}
+{col 1}{text}        year{col 14}{c |}{space 1}        9{col 27}{space 1}        0{col 39}{result}{space 1}        9{col 53}{text} {col 54}{c |}
+{res}{col 1}{text}{hline 13}{c BT}{hline 12}{hline 12}{hline 14}{hline 1}{c BRC}
+{res}
+{com}. 
+. * Column (3)
+
+. 
+. reghdfe passive_y r2000 lnmktcap lnmktcap2 lnmktcap3 lnfloat, absorb(year) vce(cluster cusip_merge)
+{res}{txt}({browse "http://scorreia.com/research/hdfe.pdf":MWFE estimator} converged in 1 iterations)
+{res}
+{txt}HDFE Linear regression{col 51}Number of obs{col 67}= {res}     4,327
+{txt}Absorbing 1 HDFE group{col 51}F({res}   5{txt},{res}   1735{txt}){col 67}= {res}      4.26
+{txt}Statistics robust to heteroskedasticity{col 51}Prob > F{col 67}= {res}    0.0007
+{txt}{col 51}R-squared{col 67}= {res}    0.0203
+{txt}{col 51}Adj R-squared{col 67}= {res}    0.0174
+{txt}{col 51}Within R-sq.{col 67}= {res}    0.0045
+{txt}{col 1}Number of clusters ({res}cusip_merge{txt}) {col 30}= {res}     1,736{txt}{col 51}Root MSE{col 67}= {res}    0.9912
+
+{txt}{ralign 78:(Std. err. adjusted for {res:1,736} clusters in {res:cusip_merge})}
+{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}   passive_y{col 14}{c |} Coefficient{col 26}  std. err.{col 38}      t{col 46}   P>|t|{col 54}     [95% con{col 67}f. interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 7}r2000 {c |}{col 14}{res}{space 2}-.1114742{col 26}{space 2} .0307626{col 37}{space 1}   -3.62{col 46}{space 3}0.000{col 54}{space 4}-.1718099{col 67}{space 3}-.0511385
+{txt}{space 4}lnmktcap {c |}{col 14}{res}{space 2} 1.849325{col 26}{space 2} .9920959{col 37}{space 1}    1.86{col 46}{space 3}0.062{col 54}{space 4}-.0965049{col 67}{space 3} 3.795154
+{txt}{space 3}lnmktcap2 {c |}{col 14}{res}{space 2}-.0893929{col 26}{space 2} .0442032{col 37}{space 1}   -2.02{col 46}{space 3}0.043{col 54}{space 4}  -.17609{col 67}{space 3}-.0026957
+{txt}{space 3}lnmktcap3 {c |}{col 14}{res}{space 2}  .001419{col 26}{space 2} .0006536{col 37}{space 1}    2.17{col 46}{space 3}0.030{col 54}{space 4}  .000137{col 67}{space 3} .0027009
+{txt}{space 5}lnfloat {c |}{col 14}{res}{space 2} .0714448{col 26}{space 2} .0409471{col 37}{space 1}    1.74{col 46}{space 3}0.081{col 54}{space 4}-.0088661{col 67}{space 3} .1517556
+{txt}{space 7}_cons {c |}{col 14}{res}{space 2}-10.67967{col 26}{space 2} 7.436145{col 37}{space 1}   -1.44{col 46}{space 3}0.151{col 54}{space 4}-25.26442{col 67}{space 3} 3.905078
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{res}
+{txt}Absorbed degrees of freedom:
+{res}{col 1}{text}{hline 13}{c TT}{hline 12}{hline 12}{hline 14}{hline 1}{c TRC}
+{col 1}{text} Absorbed FE{col 14}{c |} Categories{col 27} - Redundant{col 39}  = Num. Coefs{col 54}{c |}
+{res}{col 1}{text}{hline 13}{c +}{hline 12}{hline 12}{hline 14}{hline 1}{c RT}
+{col 1}{text}        year{col 14}{c |}{space 1}        9{col 27}{space 1}        0{col 39}{result}{space 1}        9{col 53}{text} {col 54}{c |}
+{res}{col 1}{text}{hline 13}{c BT}{hline 12}{hline 12}{hline 14}{hline 1}{c BRC}
+{res}
+{com}. 
+. 
+. 
+. ********************************************************************************
+
+. 
+. ***** Table 4 *****
+
+. 
+. egen independent_director_sd = sd(independent_director)
+
+. 
+. gen id_y = independent_director / independent_director_sd
+{txt}(1,824 missing values generated)
+
+{com}. 
+. 
+. 
+. * Column (1)
+
+. 
+. ivreghdfe id_y passive_y lnmktcap lnfloat (passive_y=r2000), absorb(year) vce(cluster cusip_merge)
+{res}{txt}Warning - duplicate variables detected
+Duplicates:{col 21}passive_y
+{res}{txt}({browse "http://scorreia.com/research/hdfe.pdf":MWFE estimator} converged in 1 iterations)
+{res}
+{txt}OLS estimation
+{hline 14}
+
+Estimates efficient for homoskedasticity only
+Statistics robust to heteroskedasticity and clustering on cusip_merge
+
+Number of clusters (cusip_merge) = {col 33}{res}  1022{txt}{col 55}Number of obs = {res}    2583
+{txt}{col 55}F(  3,  1021) = {res}    8.52
+{txt}{col 55}Prob > F      = {res}  0.0000
+{txt}Total (centered) SS     = {res} 2381.041861{txt}{col 55}Centered R2   = {res}  0.0220
+{txt}Total (uncentered) SS   = {res} 2381.041861{txt}{col 55}Uncentered R2 = {res}  0.0220
+{txt}Residual SS             = {res} 2328.627531{txt}{col 55}Root MSE      = {res}   .9517
+
+{txt}{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}        id_y{col 14}{c |} Coefficient{col 26}  std. err.{col 38}      t{col 46}   P>|t|{col 54}     [95% con{col 67}f. interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}passive_y {c |}{col 14}{res}{space 2}-.0346225{col 26}{space 2} .0199668{col 37}{space 1}   -1.73{col 46}{space 3}0.083{col 54}{space 4}-.0738033{col 67}{space 3} .0045582
+{txt}{space 4}lnmktcap {c |}{col 14}{res}{space 2}-.0834277{col 26}{space 2} .0261675{col 37}{space 1}   -3.19{col 46}{space 3}0.001{col 54}{space 4}-.1347759{col 67}{space 3}-.0320795
+{txt}{space 5}lnfloat {c |}{col 14}{res}{space 2} .4535355{col 26}{space 2} .1082545{col 37}{space 1}    4.19{col 46}{space 3}0.000{col 54}{space 4} .2411087{col 67}{space 3} .6659622
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{help ivreg2##overidtests:Hansen J statistic} (overidentification test of all instruments):{res}{col 71}  24.824
+{txt}{col 52}Chi-sq({res}1{txt}) P-val =  {res}{col 73}0.0000
+{txt}{hline 78}
+Included instruments:{col 23}passive_y lnmktcap lnfloat
+Excluded instruments:{col 23}r2000
+{help ivreg2##partial:Partialled-out}:{col 23}_cons
+{col 23}nb: total SS, model F and R2s are after partialling-out;
+{col 23}    any {help ivreg2##s_small:small-sample adjustments} include partialled-out
+{col 23}    variables in regressor count K
+Duplicates:{col 23}passive_y
+{hline 78}
+{res}
+{txt}Absorbed degrees of freedom:
+{res}{col 1}{text}{hline 13}{c TT}{hline 12}{hline 12}{hline 14}{hline 1}{c TRC}
+{col 1}{text} Absorbed FE{col 14}{c |} Categories{col 27} - Redundant{col 39}  = Num. Coefs{col 54}{c |}
+{res}{col 1}{text}{hline 13}{c +}{hline 12}{hline 12}{hline 14}{hline 1}{c RT}
+{col 1}{text}        year{col 14}{c |}{space 1}        9{col 27}{space 1}        0{col 39}{result}{space 1}        9{col 53}{text} {col 54}{c |}
+{res}{col 1}{text}{hline 13}{c BT}{hline 12}{hline 12}{hline 14}{hline 1}{c BRC}
+{res}
+{com}. 
+. * Column (2)
+
+. 
+. ivreghdfe id_y passive_y lnmktcap lnmktcap2 lnfloat (passive_y=r2000), absorb(year) vce(cluster cusip_merge)
+{res}{txt}Warning - duplicate variables detected
+Duplicates:{col 21}passive_y
+{res}{txt}({browse "http://scorreia.com/research/hdfe.pdf":MWFE estimator} converged in 1 iterations)
+{res}
+{txt}OLS estimation
+{hline 14}
+
+Estimates efficient for homoskedasticity only
+Statistics robust to heteroskedasticity and clustering on cusip_merge
+
+Number of clusters (cusip_merge) = {col 33}{res}  1022{txt}{col 55}Number of obs = {res}    2583
+{txt}{col 55}F(  4,  1021) = {res}    6.62
+{txt}{col 55}Prob > F      = {res}  0.0000
+{txt}Total (centered) SS     = {res} 2381.041861{txt}{col 55}Centered R2   = {res}  0.0222
+{txt}Total (uncentered) SS   = {res} 2381.041861{txt}{col 55}Uncentered R2 = {res}  0.0222
+{txt}Residual SS             = {res} 2328.281344{txt}{col 55}Root MSE      = {res}   .9518
+
+{txt}{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}        id_y{col 14}{c |} Coefficient{col 26}  std. err.{col 38}      t{col 46}   P>|t|{col 54}     [95% con{col 67}f. interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}passive_y {c |}{col 14}{res}{space 2}-.0350686{col 26}{space 2} .0199185{col 37}{space 1}   -1.76{col 46}{space 3}0.079{col 54}{space 4}-.0741545{col 67}{space 3} .0040173
+{txt}{space 4}lnmktcap {c |}{col 14}{res}{space 2}-.2171412{col 26}{space 2} .2976026{col 37}{space 1}   -0.73{col 46}{space 3}0.466{col 54}{space 4}-.8011238{col 67}{space 3} .3668414
+{txt}{space 3}lnmktcap2 {c |}{col 14}{res}{space 2} .0029891{col 26}{space 2} .0067439{col 37}{space 1}    0.44{col 46}{space 3}0.658{col 54}{space 4}-.0102444{col 67}{space 3} .0162225
+{txt}{space 5}lnfloat {c |}{col 14}{res}{space 2} .4545662{col 26}{space 2} .1083461{col 37}{space 1}    4.20{col 46}{space 3}0.000{col 54}{space 4} .2419597{col 67}{space 3} .6671727
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{help ivreg2##overidtests:Hansen J statistic} (overidentification test of all instruments):{res}{col 71}  24.836
+{txt}{col 52}Chi-sq({res}1{txt}) P-val =  {res}{col 73}0.0000
+{txt}{hline 78}
+Included instruments:{col 23}passive_y lnmktcap lnmktcap2 lnfloat
+Excluded instruments:{col 23}r2000
+{help ivreg2##partial:Partialled-out}:{col 23}_cons
+{col 23}nb: total SS, model F and R2s are after partialling-out;
+{col 23}    any {help ivreg2##s_small:small-sample adjustments} include partialled-out
+{col 23}    variables in regressor count K
+Duplicates:{col 23}passive_y
+{hline 78}
+{res}
+{txt}Absorbed degrees of freedom:
+{res}{col 1}{text}{hline 13}{c TT}{hline 12}{hline 12}{hline 14}{hline 1}{c TRC}
+{col 1}{text} Absorbed FE{col 14}{c |} Categories{col 27} - Redundant{col 39}  = Num. Coefs{col 54}{c |}
+{res}{col 1}{text}{hline 13}{c +}{hline 12}{hline 12}{hline 14}{hline 1}{c RT}
+{col 1}{text}        year{col 14}{c |}{space 1}        9{col 27}{space 1}        0{col 39}{result}{space 1}        9{col 53}{text} {col 54}{c |}
+{res}{col 1}{text}{hline 13}{c BT}{hline 12}{hline 12}{hline 14}{hline 1}{c BRC}
+{res}
+{com}. 
+. * Column (3)
+
+. 
+. ivreghdfe id_y passive_y lnmktcap lnmktcap2 lnmktcap3 lnfloat (passive_y=r2000), absorb(year) vce(cluster cusip_merge)
+{res}{txt}Warning - duplicate variables detected
+Duplicates:{col 21}passive_y
+{res}{txt}({browse "http://scorreia.com/research/hdfe.pdf":MWFE estimator} converged in 1 iterations)
+{res}
+{txt}OLS estimation
+{hline 14}
+
+Estimates efficient for homoskedasticity only
+Statistics robust to heteroskedasticity and clustering on cusip_merge
+
+Number of clusters (cusip_merge) = {col 33}{res}  1022{txt}{col 55}Number of obs = {res}    2583
+{txt}{col 55}F(  5,  1021) = {res}    5.74
+{txt}{col 55}Prob > F      = {res}  0.0000
+{txt}Total (centered) SS     = {res} 2381.041861{txt}{col 55}Centered R2   = {res}  0.0240
+{txt}Total (uncentered) SS   = {res} 2381.041861{txt}{col 55}Uncentered R2 = {res}  0.0240
+{txt}Residual SS             = {res} 2323.862292{txt}{col 55}Root MSE      = {res}   .9511
+
+{txt}{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}        id_y{col 14}{c |} Coefficient{col 26}  std. err.{col 38}      t{col 46}   P>|t|{col 54}     [95% con{col 67}f. interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}passive_y {c |}{col 14}{res}{space 2}-.0354548{col 26}{space 2}  .019876{col 37}{space 1}   -1.78{col 46}{space 3}0.075{col 54}{space 4}-.0744573{col 67}{space 3} .0035477
+{txt}{space 4}lnmktcap {c |}{col 14}{res}{space 2} 2.852661{col 26}{space 2} 1.332273{col 37}{space 1}    2.14{col 46}{space 3}0.032{col 54}{space 4} .2383557{col 67}{space 3} 5.466967
+{txt}{space 3}lnmktcap2 {c |}{col 14}{res}{space 2}-.1343952{col 26}{space 2} .0596713{col 37}{space 1}   -2.25{col 46}{space 3}0.025{col 54}{space 4}-.2514876{col 67}{space 3}-.0173028
+{txt}{space 3}lnmktcap3 {c |}{col 14}{res}{space 2} .0020336{col 26}{space 2} .0008857{col 37}{space 1}    2.30{col 46}{space 3}0.022{col 54}{space 4} .0002956{col 67}{space 3} .0037716
+{txt}{space 5}lnfloat {c |}{col 14}{res}{space 2} .4562104{col 26}{space 2} .1081541{col 37}{space 1}    4.22{col 46}{space 3}0.000{col 54}{space 4} .2439806{col 67}{space 3} .6684401
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{help ivreg2##overidtests:Hansen J statistic} (overidentification test of all instruments):{res}{col 71}  23.811
+{txt}{col 52}Chi-sq({res}1{txt}) P-val =  {res}{col 73}0.0000
+{txt}{hline 78}
+Included instruments:{col 23}passive_y lnmktcap lnmktcap2 lnmktcap3 lnfloat
+Excluded instruments:{col 23}r2000
+{help ivreg2##partial:Partialled-out}:{col 23}_cons
+{col 23}nb: total SS, model F and R2s are after partialling-out;
+{col 23}    any {help ivreg2##s_small:small-sample adjustments} include partialled-out
+{col 23}    variables in regressor count K
+Duplicates:{col 23}passive_y
+{hline 78}
+{res}
+{txt}Absorbed degrees of freedom:
+{res}{col 1}{text}{hline 13}{c TT}{hline 12}{hline 12}{hline 14}{hline 1}{c TRC}
+{col 1}{text} Absorbed FE{col 14}{c |} Categories{col 27} - Redundant{col 39}  = Num. Coefs{col 54}{c |}
+{res}{col 1}{text}{hline 13}{c +}{hline 12}{hline 12}{hline 14}{hline 1}{c RT}
+{col 1}{text}        year{col 14}{c |}{space 1}        9{col 27}{space 1}        0{col 39}{result}{space 1}        9{col 53}{text} {col 54}{c |}
+{res}{col 1}{text}{hline 13}{c BT}{hline 12}{hline 12}{hline 14}{hline 1}{c BRC}
+{res}
+{com}. 
+. 
+. 
+. ********************************************************************************
+
+. ***** Table 5 *****
+
+. 
+. preserve 
+
+. 
+. drop if year > 2002
+{txt}(2,000 observations deleted)
+
+{com}. 
+. ivreghdfe id_y passive_y lnmktcap lnfloat (passive_y=r2000), absorb(year) vce(cluster cusip_merge)
+{res}{txt}Warning - duplicate variables detected
+Duplicates:{col 21}passive_y
+{res}{txt}({browse "http://scorreia.com/research/hdfe.pdf":MWFE estimator} converged in 1 iterations)
+{res}
+{txt}OLS estimation
+{hline 14}
+
+Estimates efficient for homoskedasticity only
+Statistics robust to heteroskedasticity and clustering on cusip_merge
+
+Number of clusters (cusip_merge) = {col 33}{res}   813{txt}{col 55}Number of obs = {res}    1482
+{txt}{col 55}F(  3,   812) = {res}    6.83
+{txt}{col 55}Prob > F      = {res}  0.0002
+{txt}Total (centered) SS     = {res} 1798.531476{txt}{col 55}Centered R2   = {res}  0.0259
+{txt}Total (uncentered) SS   = {res} 1798.531476{txt}{col 55}Uncentered R2 = {res}  0.0259
+{txt}Residual SS             = {res} 1751.859864{txt}{col 55}Root MSE      = {res}    1.09
+
+{txt}{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}        id_y{col 14}{c |} Coefficient{col 26}  std. err.{col 38}      t{col 46}   P>|t|{col 54}     [95% con{col 67}f. interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}passive_y {c |}{col 14}{res}{space 2}-.0277998{col 26}{space 2} .0308921{col 37}{space 1}   -0.90{col 46}{space 3}0.368{col 54}{space 4}-.0884377{col 67}{space 3}  .032838
+{txt}{space 4}lnmktcap {c |}{col 14}{res}{space 2}-.0962866{col 26}{space 2} .0306262{col 37}{space 1}   -3.14{col 46}{space 3}0.002{col 54}{space 4}-.1564026{col 67}{space 3}-.0361707
+{txt}{space 5}lnfloat {c |}{col 14}{res}{space 2} .5005905{col 26}{space 2} .1398677{col 37}{space 1}    3.58{col 46}{space 3}0.000{col 54}{space 4} .2260457{col 67}{space 3} .7751353
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{help ivreg2##overidtests:Hansen J statistic} (overidentification test of all instruments):{res}{col 71}  15.295
+{txt}{col 52}Chi-sq({res}1{txt}) P-val =  {res}{col 73}0.0001
+{txt}{hline 78}
+Included instruments:{col 23}passive_y lnmktcap lnfloat
+Excluded instruments:{col 23}r2000
+{help ivreg2##partial:Partialled-out}:{col 23}_cons
+{col 23}nb: total SS, model F and R2s are after partialling-out;
+{col 23}    any {help ivreg2##s_small:small-sample adjustments} include partialled-out
+{col 23}    variables in regressor count K
+Duplicates:{col 23}passive_y
+{hline 78}
+{res}
+{txt}Absorbed degrees of freedom:
+{res}{col 1}{text}{hline 13}{c TT}{hline 12}{hline 12}{hline 14}{hline 1}{c TRC}
+{col 1}{text} Absorbed FE{col 14}{c |} Categories{col 27} - Redundant{col 39}  = Num. Coefs{col 54}{c |}
+{res}{col 1}{text}{hline 13}{c +}{hline 12}{hline 12}{hline 14}{hline 1}{c RT}
+{col 1}{text}        year{col 14}{c |}{space 1}        5{col 27}{space 1}        0{col 39}{result}{space 1}        5{col 53}{text} {col 54}{c |}
+{res}{col 1}{text}{hline 13}{c BT}{hline 12}{hline 12}{hline 14}{hline 1}{c BRC}
+{res}
+{com}. 
+. ivreghdfe id_y passive_y lnmktcap lnmktcap2 lnfloat (passive_y=r2000), absorb(year) vce(cluster cusip_merge)
+{res}{txt}Warning - duplicate variables detected
+Duplicates:{col 21}passive_y
+{res}{txt}({browse "http://scorreia.com/research/hdfe.pdf":MWFE estimator} converged in 1 iterations)
+{res}
+{txt}OLS estimation
+{hline 14}
+
+Estimates efficient for homoskedasticity only
+Statistics robust to heteroskedasticity and clustering on cusip_merge
+
+Number of clusters (cusip_merge) = {col 33}{res}   813{txt}{col 55}Number of obs = {res}    1482
+{txt}{col 55}F(  4,   812) = {res}    5.25
+{txt}{col 55}Prob > F      = {res}  0.0004
+{txt}Total (centered) SS     = {res} 1798.531476{txt}{col 55}Centered R2   = {res}  0.0260
+{txt}Total (uncentered) SS   = {res} 1798.531476{txt}{col 55}Uncentered R2 = {res}  0.0260
+{txt}Residual SS             = {res} 1751.775311{txt}{col 55}Root MSE      = {res}   1.091
+
+{txt}{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}        id_y{col 14}{c |} Coefficient{col 26}  std. err.{col 38}      t{col 46}   P>|t|{col 54}     [95% con{col 67}f. interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}passive_y {c |}{col 14}{res}{space 2}-.0280191{col 26}{space 2} .0308534{col 37}{space 1}   -0.91{col 46}{space 3}0.364{col 54}{space 4}-.0885808{col 67}{space 3} .0325427
+{txt}{space 4}lnmktcap {c |}{col 14}{res}{space 2}-.1690882{col 26}{space 2} .3143203{col 37}{space 1}   -0.54{col 46}{space 3}0.591{col 54}{space 4}-.7860643{col 67}{space 3} .4478878
+{txt}{space 3}lnmktcap2 {c |}{col 14}{res}{space 2} .0016259{col 26}{space 2} .0071195{col 37}{space 1}    0.23{col 46}{space 3}0.819{col 54}{space 4}-.0123488{col 67}{space 3} .0156006
+{txt}{space 5}lnfloat {c |}{col 14}{res}{space 2} .5008507{col 26}{space 2} .1399286{col 37}{space 1}    3.58{col 46}{space 3}0.000{col 54}{space 4} .2261863{col 67}{space 3} .7755151
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{help ivreg2##overidtests:Hansen J statistic} (overidentification test of all instruments):{res}{col 71}  15.303
+{txt}{col 52}Chi-sq({res}1{txt}) P-val =  {res}{col 73}0.0001
+{txt}{hline 78}
+Included instruments:{col 23}passive_y lnmktcap lnmktcap2 lnfloat
+Excluded instruments:{col 23}r2000
+{help ivreg2##partial:Partialled-out}:{col 23}_cons
+{col 23}nb: total SS, model F and R2s are after partialling-out;
+{col 23}    any {help ivreg2##s_small:small-sample adjustments} include partialled-out
+{col 23}    variables in regressor count K
+Duplicates:{col 23}passive_y
+{hline 78}
+{res}
+{txt}Absorbed degrees of freedom:
+{res}{col 1}{text}{hline 13}{c TT}{hline 12}{hline 12}{hline 14}{hline 1}{c TRC}
+{col 1}{text} Absorbed FE{col 14}{c |} Categories{col 27} - Redundant{col 39}  = Num. Coefs{col 54}{c |}
+{res}{col 1}{text}{hline 13}{c +}{hline 12}{hline 12}{hline 14}{hline 1}{c RT}
+{col 1}{text}        year{col 14}{c |}{space 1}        5{col 27}{space 1}        0{col 39}{result}{space 1}        5{col 53}{text} {col 54}{c |}
+{res}{col 1}{text}{hline 13}{c BT}{hline 12}{hline 12}{hline 14}{hline 1}{c BRC}
+{res}
+{com}. 
+. ivreghdfe id_y passive_y lnmktcap lnmktcap2 lnmktcap3 lnfloat (passive_y=r2000), absorb(year) vce(cluster cusip_merge)
+{res}{txt}Warning - duplicate variables detected
+Duplicates:{col 21}passive_y
+{res}{txt}({browse "http://scorreia.com/research/hdfe.pdf":MWFE estimator} converged in 1 iterations)
+{res}
+{txt}OLS estimation
+{hline 14}
+
+Estimates efficient for homoskedasticity only
+Statistics robust to heteroskedasticity and clustering on cusip_merge
+
+Number of clusters (cusip_merge) = {col 33}{res}   813{txt}{col 55}Number of obs = {res}    1482
+{txt}{col 55}F(  5,   812) = {res}    4.87
+{txt}{col 55}Prob > F      = {res}  0.0002
+{txt}Total (centered) SS     = {res} 1798.531476{txt}{col 55}Centered R2   = {res}  0.0297
+{txt}Total (uncentered) SS   = {res} 1798.531476{txt}{col 55}Uncentered R2 = {res}  0.0297
+{txt}Residual SS             = {res}  1745.06751{txt}{col 55}Root MSE      = {res}   1.089
+
+{txt}{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}        id_y{col 14}{c |} Coefficient{col 26}  std. err.{col 38}      t{col 46}   P>|t|{col 54}     [95% con{col 67}f. interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}passive_y {c |}{col 14}{res}{space 2}-.0280085{col 26}{space 2} .0307853{col 37}{space 1}   -0.91{col 46}{space 3}0.363{col 54}{space 4}-.0884366{col 67}{space 3} .0324197
+{txt}{space 4}lnmktcap {c |}{col 14}{res}{space 2} 3.868198{col 26}{space 2} 1.506264{col 37}{space 1}    2.57{col 46}{space 3}0.010{col 54}{space 4} .9115672{col 67}{space 3} 6.824829
+{txt}{space 3}lnmktcap2 {c |}{col 14}{res}{space 2}-.1786392{col 26}{space 2} .0672255{col 37}{space 1}   -2.66{col 46}{space 3}0.008{col 54}{space 4}-.3105954{col 67}{space 3} -.046683
+{txt}{space 3}lnmktcap3 {c |}{col 14}{res}{space 2} .0026585{col 26}{space 2} .0009883{col 37}{space 1}    2.69{col 46}{space 3}0.007{col 54}{space 4} .0007185{col 67}{space 3} .0045985
+{txt}{space 5}lnfloat {c |}{col 14}{res}{space 2} .4989062{col 26}{space 2} .1396048{col 37}{space 1}    3.57{col 46}{space 3}0.000{col 54}{space 4} .2248773{col 67}{space 3}  .772935
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{help ivreg2##overidtests:Hansen J statistic} (overidentification test of all instruments):{res}{col 71}  14.692
+{txt}{col 52}Chi-sq({res}1{txt}) P-val =  {res}{col 73}0.0001
+{txt}{hline 78}
+Included instruments:{col 23}passive_y lnmktcap lnmktcap2 lnmktcap3 lnfloat
+Excluded instruments:{col 23}r2000
+{help ivreg2##partial:Partialled-out}:{col 23}_cons
+{col 23}nb: total SS, model F and R2s are after partialling-out;
+{col 23}    any {help ivreg2##s_small:small-sample adjustments} include partialled-out
+{col 23}    variables in regressor count K
+Duplicates:{col 23}passive_y
+{hline 78}
+{res}
+{txt}Absorbed degrees of freedom:
+{res}{col 1}{text}{hline 13}{c TT}{hline 12}{hline 12}{hline 14}{hline 1}{c TRC}
+{col 1}{text} Absorbed FE{col 14}{c |} Categories{col 27} - Redundant{col 39}  = Num. Coefs{col 54}{c |}
+{res}{col 1}{text}{hline 13}{c +}{hline 12}{hline 12}{hline 14}{hline 1}{c RT}
+{col 1}{text}        year{col 14}{c |}{space 1}        5{col 27}{space 1}        0{col 39}{result}{space 1}        5{col 53}{text} {col 54}{c |}
+{res}{col 1}{text}{hline 13}{c BT}{hline 12}{hline 12}{hline 14}{hline 1}{c BRC}
+{res}
+{com}. 
+. restore
+
+. 
+. 
+. 
+. preserve
+
+. 
+. drop if year < 2003
+{txt}(2,500 observations deleted)
+
+{com}. 
+. ivreghdfe id_y passive_y lnmktcap lnfloat (passive_y=r2000), absorb(year) vce(cluster cusip_merge)
+{res}{txt}Warning - duplicate variables detected
+Duplicates:{col 21}passive_y
+{res}{txt}({browse "http://scorreia.com/research/hdfe.pdf":MWFE estimator} converged in 1 iterations)
+{res}
+{txt}OLS estimation
+{hline 14}
+
+Estimates efficient for homoskedasticity only
+Statistics robust to heteroskedasticity and clustering on cusip_merge
+
+Number of clusters (cusip_merge) = {col 33}{res}   520{txt}{col 55}Number of obs = {res}    1101
+{txt}{col 55}F(  3,   519) = {res}    3.24
+{txt}{col 55}Prob > F      = {res}  0.0220
+{txt}Total (centered) SS     = {res} 582.5103855{txt}{col 55}Centered R2   = {res}  0.0137
+{txt}Total (uncentered) SS   = {res} 582.5103855{txt}{col 55}Uncentered R2 = {res}  0.0137
+{txt}Residual SS             = {res} 574.5325023{txt}{col 55}Root MSE      = {res}   .7247
+
+{txt}{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}        id_y{col 14}{c |} Coefficient{col 26}  std. err.{col 38}      t{col 46}   P>|t|{col 54}     [95% con{col 67}f. interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}passive_y {c |}{col 14}{res}{space 2}-.0407213{col 26}{space 2} .0212526{col 37}{space 1}   -1.92{col 46}{space 3}0.056{col 54}{space 4} -.082473{col 67}{space 3} .0010304
+{txt}{space 4}lnmktcap {c |}{col 14}{res}{space 2}-.0532147{col 26}{space 2} .0344303{col 37}{space 1}   -1.55{col 46}{space 3}0.123{col 54}{space 4}-.1208546{col 67}{space 3} .0144252
+{txt}{space 5}lnfloat {c |}{col 14}{res}{space 2}  .326074{col 26}{space 2} .1325031{col 37}{space 1}    2.46{col 46}{space 3}0.014{col 54}{space 4} .0657657{col 67}{space 3} .5863824
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{help ivreg2##overidtests:Hansen J statistic} (overidentification test of all instruments):{res}{col 71}  23.514
+{txt}{col 52}Chi-sq({res}1{txt}) P-val =  {res}{col 73}0.0000
+{txt}{hline 78}
+Included instruments:{col 23}passive_y lnmktcap lnfloat
+Excluded instruments:{col 23}r2000
+{help ivreg2##partial:Partialled-out}:{col 23}_cons
+{col 23}nb: total SS, model F and R2s are after partialling-out;
+{col 23}    any {help ivreg2##s_small:small-sample adjustments} include partialled-out
+{col 23}    variables in regressor count K
+Duplicates:{col 23}passive_y
+{hline 78}
+{res}
+{txt}Absorbed degrees of freedom:
+{res}{col 1}{text}{hline 13}{c TT}{hline 12}{hline 12}{hline 14}{hline 1}{c TRC}
+{col 1}{text} Absorbed FE{col 14}{c |} Categories{col 27} - Redundant{col 39}  = Num. Coefs{col 54}{c |}
+{res}{col 1}{text}{hline 13}{c +}{hline 12}{hline 12}{hline 14}{hline 1}{c RT}
+{col 1}{text}        year{col 14}{c |}{space 1}        4{col 27}{space 1}        0{col 39}{result}{space 1}        4{col 53}{text} {col 54}{c |}
+{res}{col 1}{text}{hline 13}{c BT}{hline 12}{hline 12}{hline 14}{hline 1}{c BRC}
+{res}
+{com}. 
+. ivreghdfe id_y passive_y lnmktcap lnmktcap2 lnfloat (passive_y=r2000), absorb(year) vce(cluster cusip_merge)
+{res}{txt}Warning - duplicate variables detected
+Duplicates:{col 21}passive_y
+{res}{txt}({browse "http://scorreia.com/research/hdfe.pdf":MWFE estimator} converged in 1 iterations)
+{res}
+{txt}OLS estimation
+{hline 14}
+
+Estimates efficient for homoskedasticity only
+Statistics robust to heteroskedasticity and clustering on cusip_merge
+
+Number of clusters (cusip_merge) = {col 33}{res}   520{txt}{col 55}Number of obs = {res}    1101
+{txt}{col 55}F(  4,   519) = {res}    2.57
+{txt}{col 55}Prob > F      = {res}  0.0374
+{txt}Total (centered) SS     = {res} 582.5103855{txt}{col 55}Centered R2   = {res}  0.0148
+{txt}Total (uncentered) SS   = {res} 582.5103855{txt}{col 55}Uncentered R2 = {res}  0.0148
+{txt}Residual SS             = {res} 573.9037459{txt}{col 55}Root MSE      = {res}   .7246
+
+{txt}{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}        id_y{col 14}{c |} Coefficient{col 26}  std. err.{col 38}      t{col 46}   P>|t|{col 54}     [95% con{col 67}f. interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}passive_y {c |}{col 14}{res}{space 2}-.0422795{col 26}{space 2} .0213428{col 37}{space 1}   -1.98{col 46}{space 3}0.048{col 54}{space 4}-.0842084{col 67}{space 3}-.0003507
+{txt}{space 4}lnmktcap {c |}{col 14}{res}{space 2}-.4847334{col 26}{space 2} .7383417{col 37}{space 1}   -0.66{col 46}{space 3}0.512{col 54}{space 4}-1.935239{col 67}{space 3} .9657724
+{txt}{space 3}lnmktcap2 {c |}{col 14}{res}{space 2}  .009664{col 26}{space 2} .0166353{col 37}{space 1}    0.58{col 46}{space 3}0.562{col 54}{space 4}-.0230167{col 67}{space 3} .0423448
+{txt}{space 5}lnfloat {c |}{col 14}{res}{space 2} .3333953{col 26}{space 2} .1330954{col 37}{space 1}    2.50{col 46}{space 3}0.013{col 54}{space 4} .0719234{col 67}{space 3} .5948673
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{help ivreg2##overidtests:Hansen J statistic} (overidentification test of all instruments):{res}{col 71}  23.816
+{txt}{col 52}Chi-sq({res}1{txt}) P-val =  {res}{col 73}0.0000
+{txt}{hline 78}
+Included instruments:{col 23}passive_y lnmktcap lnmktcap2 lnfloat
+Excluded instruments:{col 23}r2000
+{help ivreg2##partial:Partialled-out}:{col 23}_cons
+{col 23}nb: total SS, model F and R2s are after partialling-out;
+{col 23}    any {help ivreg2##s_small:small-sample adjustments} include partialled-out
+{col 23}    variables in regressor count K
+Duplicates:{col 23}passive_y
+{hline 78}
+{res}
+{txt}Absorbed degrees of freedom:
+{res}{col 1}{text}{hline 13}{c TT}{hline 12}{hline 12}{hline 14}{hline 1}{c TRC}
+{col 1}{text} Absorbed FE{col 14}{c |} Categories{col 27} - Redundant{col 39}  = Num. Coefs{col 54}{c |}
+{res}{col 1}{text}{hline 13}{c +}{hline 12}{hline 12}{hline 14}{hline 1}{c RT}
+{col 1}{text}        year{col 14}{c |}{space 1}        4{col 27}{space 1}        0{col 39}{result}{space 1}        4{col 53}{text} {col 54}{c |}
+{res}{col 1}{text}{hline 13}{c BT}{hline 12}{hline 12}{hline 14}{hline 1}{c BRC}
+{res}
+{com}. 
+. ivreghdfe id_y passive_y lnmktcap lnmktcap2 lnmktcap3 lnfloat (passive_y=r2000), absorb(year) vce(cluster cusip_merge)
+{res}{txt}Warning - duplicate variables detected
+Duplicates:{col 21}passive_y
+{res}{txt}({browse "http://scorreia.com/research/hdfe.pdf":MWFE estimator} converged in 1 iterations)
+{res}
+{txt}OLS estimation
+{hline 14}
+
+Estimates efficient for homoskedasticity only
+Statistics robust to heteroskedasticity and clustering on cusip_merge
+
+Number of clusters (cusip_merge) = {col 33}{res}   520{txt}{col 55}Number of obs = {res}    1101
+{txt}{col 55}F(  5,   519) = {res}    2.06
+{txt}{col 55}Prob > F      = {res}  0.0686
+{txt}Total (centered) SS     = {res} 582.5103855{txt}{col 55}Centered R2   = {res}  0.0150
+{txt}Total (uncentered) SS   = {res} 582.5103855{txt}{col 55}Uncentered R2 = {res}  0.0150
+{txt}Residual SS             = {res} 573.7799896{txt}{col 55}Root MSE      = {res}   .7249
+
+{txt}{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}        id_y{col 14}{c |} Coefficient{col 26}  std. err.{col 38}      t{col 46}   P>|t|{col 54}     [95% con{col 67}f. interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}passive_y {c |}{col 14}{res}{space 2}-.0419541{col 26}{space 2} .0214581{col 37}{space 1}   -1.96{col 46}{space 3}0.051{col 54}{space 4}-.0841096{col 67}{space 3} .0002013
+{txt}{space 4}lnmktcap {c |}{col 14}{res}{space 2}-2.492166{col 26}{space 2} 7.650812{col 37}{space 1}   -0.33{col 46}{space 3}0.745{col 54}{space 4}-17.52253{col 67}{space 3}  12.5382
+{txt}{space 3}lnmktcap2 {c |}{col 14}{res}{space 2} .1010467{col 26}{space 2} .3526438{col 37}{space 1}    0.29{col 46}{space 3}0.775{col 54}{space 4}-.5917381{col 67}{space 3} .7938315
+{txt}{space 3}lnmktcap3 {c |}{col 14}{res}{space 2}-.0013798{col 26}{space 2} .0054044{col 37}{space 1}   -0.26{col 46}{space 3}0.799{col 54}{space 4}-.0119969{col 67}{space 3} .0092373
+{txt}{space 5}lnfloat {c |}{col 14}{res}{space 2} .3284744{col 26}{space 2} .1339653{col 37}{space 1}    2.45{col 46}{space 3}0.015{col 54}{space 4} .0652934{col 67}{space 3} .5916553
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{help ivreg2##overidtests:Hansen J statistic} (overidentification test of all instruments):{res}{col 71}  23.735
+{txt}{col 52}Chi-sq({res}1{txt}) P-val =  {res}{col 73}0.0000
+{txt}{hline 78}
+Included instruments:{col 23}passive_y lnmktcap lnmktcap2 lnmktcap3 lnfloat
+Excluded instruments:{col 23}r2000
+{help ivreg2##partial:Partialled-out}:{col 23}_cons
+{col 23}nb: total SS, model F and R2s are after partialling-out;
+{col 23}    any {help ivreg2##s_small:small-sample adjustments} include partialled-out
+{col 23}    variables in regressor count K
+Duplicates:{col 23}passive_y
+{hline 78}
+{res}
+{txt}Absorbed degrees of freedom:
+{res}{col 1}{text}{hline 13}{c TT}{hline 12}{hline 12}{hline 14}{hline 1}{c TRC}
+{col 1}{text} Absorbed FE{col 14}{c |} Categories{col 27} - Redundant{col 39}  = Num. Coefs{col 54}{c |}
+{res}{col 1}{text}{hline 13}{c +}{hline 12}{hline 12}{hline 14}{hline 1}{c RT}
+{col 1}{text}        year{col 14}{c |}{space 1}        4{col 27}{space 1}        0{col 39}{result}{space 1}        4{col 53}{text} {col 54}{c |}
+{res}{col 1}{text}{hline 13}{c BT}{hline 12}{hline 12}{hline 14}{hline 1}{c BRC}
+{res}
+{com}. 
+. restore
+
+. 
+. 
+. 
+. ********************************************************************************
+
+. 
+. ***** Table 6 *****
+
+. 
+. egen greater_sd = sd(greater_ability)
+
+. 
+. gen greater_y = greater_ability / greater_sd
+{txt}(2,708 missing values generated)
+
+{com}. 
+. 
+. 
+. * Column (4)
+
+. 
+. ivreghdfe greater_y passive_y lnmktcap lnfloat (passive_y=r2000), absorb(year) vce(cluster cusip_merge)
+{res}{txt}Warning - duplicate variables detected
+Duplicates:{col 21}passive_y
+{res}{txt}({browse "http://scorreia.com/research/hdfe.pdf":MWFE estimator} converged in 1 iterations)
+{res}
+{txt}OLS estimation
+{hline 14}
+
+Estimates efficient for homoskedasticity only
+Statistics robust to heteroskedasticity and clustering on cusip_merge
+
+Number of clusters (cusip_merge) = {col 33}{res}  1011{txt}{col 55}Number of obs = {res}    1728
+{txt}{col 55}F(  3,  1010) = {res}    2.05
+{txt}{col 55}Prob > F      = {res}  0.1050
+{txt}Total (centered) SS     = {res} 1779.830084{txt}{col 55}Centered R2   = {res}  0.0038
+{txt}Total (uncentered) SS   = {res} 1779.830084{txt}{col 55}Uncentered R2 = {res}  0.0038
+{txt}Residual SS             = {res} 1772.998282{txt}{col 55}Root MSE      = {res}   1.015
+
+{txt}{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}   greater_y{col 14}{c |} Coefficient{col 26}  std. err.{col 38}      t{col 46}   P>|t|{col 54}     [95% con{col 67}f. interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}passive_y {c |}{col 14}{res}{space 2}-.0092221{col 26}{space 2} .0254321{col 37}{space 1}   -0.36{col 46}{space 3}0.717{col 54}{space 4} -.059128{col 67}{space 3} .0406838
+{txt}{space 4}lnmktcap {c |}{col 14}{res}{space 2}-.0529132{col 26}{space 2} .0247336{col 37}{space 1}   -2.14{col 46}{space 3}0.033{col 54}{space 4}-.1014484{col 67}{space 3} -.004378
+{txt}{space 5}lnfloat {c |}{col 14}{res}{space 2} .0511171{col 26}{space 2} .0288368{col 37}{space 1}    1.77{col 46}{space 3}0.077{col 54}{space 4}-.0054698{col 67}{space 3} .1077041
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{help ivreg2##overidtests:Hansen J statistic} (overidentification test of all instruments):{res}{col 71}   6.642
+{txt}{col 52}Chi-sq({res}1{txt}) P-val =  {res}{col 73}0.0100
+{txt}{hline 78}
+Included instruments:{col 23}passive_y lnmktcap lnfloat
+Excluded instruments:{col 23}r2000
+{help ivreg2##partial:Partialled-out}:{col 23}_cons
+{col 23}nb: total SS, model F and R2s are after partialling-out;
+{col 23}    any {help ivreg2##s_small:small-sample adjustments} include partialled-out
+{col 23}    variables in regressor count K
+Duplicates:{col 23}passive_y
+{hline 78}
+{res}
+{txt}Absorbed degrees of freedom:
+{res}{col 1}{text}{hline 13}{c TT}{hline 12}{hline 12}{hline 14}{hline 1}{c TRC}
+{col 1}{text} Absorbed FE{col 14}{c |} Categories{col 27} - Redundant{col 39}  = Num. Coefs{col 54}{c |}
+{res}{col 1}{text}{hline 13}{c +}{hline 12}{hline 12}{hline 14}{hline 1}{c RT}
+{col 1}{text}        year{col 14}{c |}{space 1}        5{col 27}{space 1}        0{col 39}{result}{space 1}        5{col 53}{text} {col 54}{c |}
+{res}{col 1}{text}{hline 13}{c BT}{hline 12}{hline 12}{hline 14}{hline 1}{c BRC}
+{res}
+{com}. 
+. * Column (5)
+
+. 
+. ivreghdfe greater_y passive_y lnmktcap lnmktcap2 lnfloat (passive_y=r2000), absorb(year) vce(cluster cusip_merge)
+{res}{txt}Warning - duplicate variables detected
+Duplicates:{col 21}passive_y
+{res}{txt}({browse "http://scorreia.com/research/hdfe.pdf":MWFE estimator} converged in 1 iterations)
+{res}
+{txt}OLS estimation
+{hline 14}
+
+Estimates efficient for homoskedasticity only
+Statistics robust to heteroskedasticity and clustering on cusip_merge
+
+Number of clusters (cusip_merge) = {col 33}{res}  1011{txt}{col 55}Number of obs = {res}    1728
+{txt}{col 55}F(  4,  1010) = {res}    2.10
+{txt}{col 55}Prob > F      = {res}  0.0790
+{txt}Total (centered) SS     = {res} 1779.830084{txt}{col 55}Centered R2   = {res}  0.0059
+{txt}Total (uncentered) SS   = {res} 1779.830084{txt}{col 55}Uncentered R2 = {res}  0.0059
+{txt}Residual SS             = {res} 1769.369653{txt}{col 55}Root MSE      = {res}   1.015
+
+{txt}{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}   greater_y{col 14}{c |} Coefficient{col 26}  std. err.{col 38}      t{col 46}   P>|t|{col 54}     [95% con{col 67}f. interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}passive_y {c |}{col 14}{res}{space 2}-.0109468{col 26}{space 2} .0262615{col 37}{space 1}   -0.42{col 46}{space 3}0.677{col 54}{space 4}-.0624801{col 67}{space 3} .0405866
+{txt}{space 4}lnmktcap {c |}{col 14}{res}{space 2}-.5984914{col 26}{space 2} .5551335{col 37}{space 1}   -1.08{col 46}{space 3}0.281{col 54}{space 4}-1.687839{col 67}{space 3} .4908558
+{txt}{space 3}lnmktcap2 {c |}{col 14}{res}{space 2} .0121162{col 26}{space 2} .0118514{col 37}{space 1}    1.02{col 46}{space 3}0.307{col 54}{space 4}  -.01114{col 67}{space 3} .0353723
+{txt}{space 5}lnfloat {c |}{col 14}{res}{space 2} .0572262{col 26}{space 2} .0307779{col 37}{space 1}    1.86{col 46}{space 3}0.063{col 54}{space 4}-.0031698{col 67}{space 3} .1176223
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{help ivreg2##overidtests:Hansen J statistic} (overidentification test of all instruments):{res}{col 71}   6.435
+{txt}{col 52}Chi-sq({res}1{txt}) P-val =  {res}{col 73}0.0112
+{txt}{hline 78}
+Included instruments:{col 23}passive_y lnmktcap lnmktcap2 lnfloat
+Excluded instruments:{col 23}r2000
+{help ivreg2##partial:Partialled-out}:{col 23}_cons
+{col 23}nb: total SS, model F and R2s are after partialling-out;
+{col 23}    any {help ivreg2##s_small:small-sample adjustments} include partialled-out
+{col 23}    variables in regressor count K
+Duplicates:{col 23}passive_y
+{hline 78}
+{res}
+{txt}Absorbed degrees of freedom:
+{res}{col 1}{text}{hline 13}{c TT}{hline 12}{hline 12}{hline 14}{hline 1}{c TRC}
+{col 1}{text} Absorbed FE{col 14}{c |} Categories{col 27} - Redundant{col 39}  = Num. Coefs{col 54}{c |}
+{res}{col 1}{text}{hline 13}{c +}{hline 12}{hline 12}{hline 14}{hline 1}{c RT}
+{col 1}{text}        year{col 14}{c |}{space 1}        5{col 27}{space 1}        0{col 39}{result}{space 1}        5{col 53}{text} {col 54}{c |}
+{res}{col 1}{text}{hline 13}{c BT}{hline 12}{hline 12}{hline 14}{hline 1}{c BRC}
+{res}
+{com}. 
+. * Column (6)
+
+. 
+. ivreghdfe greater_y passive_y lnmktcap lnmktcap2 lnmktcap3 lnfloat (passive_y=r2000), absorb(year) vce(cluster cusip_merge)
+{res}{txt}Warning - duplicate variables detected
+Duplicates:{col 21}passive_y
+{res}{txt}({browse "http://scorreia.com/research/hdfe.pdf":MWFE estimator} converged in 1 iterations)
+{res}
+{txt}OLS estimation
+{hline 14}
+
+Estimates efficient for homoskedasticity only
+Statistics robust to heteroskedasticity and clustering on cusip_merge
+
+Number of clusters (cusip_merge) = {col 33}{res}  1011{txt}{col 55}Number of obs = {res}    1728
+{txt}{col 55}F(  5,  1010) = {res}    1.92
+{txt}{col 55}Prob > F      = {res}  0.0877
+{txt}Total (centered) SS     = {res} 1779.830084{txt}{col 55}Centered R2   = {res}  0.0061
+{txt}Total (uncentered) SS   = {res} 1779.830084{txt}{col 55}Uncentered R2 = {res}  0.0061
+{txt}Residual SS             = {res} 1768.977668{txt}{col 55}Root MSE      = {res}   1.015
+
+{txt}{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}   greater_y{col 14}{c |} Coefficient{col 26}  std. err.{col 38}      t{col 46}   P>|t|{col 54}     [95% con{col 67}f. interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}passive_y {c |}{col 14}{res}{space 2}-.0104355{col 26}{space 2} .0257452{col 37}{space 1}   -0.41{col 46}{space 3}0.685{col 54}{space 4}-.0609556{col 67}{space 3} .0400847
+{txt}{space 4}lnmktcap {c |}{col 14}{res}{space 2}-1.758782{col 26}{space 2} 3.540347{col 37}{space 1}   -0.50{col 46}{space 3}0.619{col 54}{space 4} -8.70606{col 67}{space 3} 5.188497
+{txt}{space 3}lnmktcap2 {c |}{col 14}{res}{space 2} .0629702{col 26}{space 2} .1431896{col 37}{space 1}    0.44{col 46}{space 3}0.660{col 54}{space 4} -.218013{col 67}{space 3} .3439535
+{txt}{space 3}lnmktcap3 {c |}{col 14}{res}{space 2} -.000737{col 26}{space 2} .0019105{col 37}{space 1}   -0.39{col 46}{space 3}0.700{col 54}{space 4}-.0044859{col 67}{space 3} .0030119
+{txt}{space 5}lnfloat {c |}{col 14}{res}{space 2}  .057505{col 26}{space 2} .0310744{col 37}{space 1}    1.85{col 46}{space 3}0.065{col 54}{space 4}-.0034727{col 67}{space 3} .1184827
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{help ivreg2##overidtests:Hansen J statistic} (overidentification test of all instruments):{res}{col 71}   6.643
+{txt}{col 52}Chi-sq({res}1{txt}) P-val =  {res}{col 73}0.0100
+{txt}{hline 78}
+Included instruments:{col 23}passive_y lnmktcap lnmktcap2 lnmktcap3 lnfloat
+Excluded instruments:{col 23}r2000
+{help ivreg2##partial:Partialled-out}:{col 23}_cons
+{col 23}nb: total SS, model F and R2s are after partialling-out;
+{col 23}    any {help ivreg2##s_small:small-sample adjustments} include partialled-out
+{col 23}    variables in regressor count K
+Duplicates:{col 23}passive_y
+{hline 78}
+{res}
+{txt}Absorbed degrees of freedom:
+{res}{col 1}{text}{hline 13}{c TT}{hline 12}{hline 12}{hline 14}{hline 1}{c TRC}
+{col 1}{text} Absorbed FE{col 14}{c |} Categories{col 27} - Redundant{col 39}  = Num. Coefs{col 54}{c |}
+{res}{col 1}{text}{hline 13}{c +}{hline 12}{hline 12}{hline 14}{hline 1}{c RT}
+{col 1}{text}        year{col 14}{c |}{space 1}        5{col 27}{space 1}        0{col 39}{result}{space 1}        5{col 53}{text} {col 54}{c |}
+{res}{col 1}{text}{hline 13}{c BT}{hline 12}{hline 12}{hline 14}{hline 1}{c BRC}
+{res}
+{com}. 
+. 
+. 
+. ********************************************************************************
+
+. 
+. ***** Table 7 *****
+
+. 
+. egen dual_sd = sd(dualclass)
+
+. 
+. gen dual_y = dualclass / dual_sd
+{txt}(2,708 missing values generated)
+
+{com}. 
+. 
+. 
+. * Column (1)
+
+. 
+. ivreghdfe dual_y passive_y lnmktcap lnfloat (passive_y=r2000), absorb(year) vce(cluster cusip_merge)
+{res}{txt}Warning - duplicate variables detected
+Duplicates:{col 21}passive_y
+{res}{txt}({browse "http://scorreia.com/research/hdfe.pdf":MWFE estimator} converged in 1 iterations)
+{res}
+{txt}OLS estimation
+{hline 14}
+
+Estimates efficient for homoskedasticity only
+Statistics robust to heteroskedasticity and clustering on cusip_merge
+
+Number of clusters (cusip_merge) = {col 33}{res}  1011{txt}{col 55}Number of obs = {res}    1728
+{txt}{col 55}F(  3,  1010) = {res}    4.60
+{txt}{col 55}Prob > F      = {res}  0.0033
+{txt}Total (centered) SS     = {res} 1719.635011{txt}{col 55}Centered R2   = {res}  0.0186
+{txt}Total (uncentered) SS   = {res} 1719.635011{txt}{col 55}Uncentered R2 = {res}  0.0186
+{txt}Residual SS             = {res} 1687.642925{txt}{col 55}Root MSE      = {res}   .9905
+
+{txt}{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}      dual_y{col 14}{c |} Coefficient{col 26}  std. err.{col 38}      t{col 46}   P>|t|{col 54}     [95% con{col 67}f. interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}passive_y {c |}{col 14}{res}{space 2} .0078918{col 26}{space 2} .0226151{col 37}{space 1}    0.35{col 46}{space 3}0.727{col 54}{space 4}-.0364861{col 67}{space 3} .0522697
+{txt}{space 4}lnmktcap {c |}{col 14}{res}{space 2}-.0408493{col 26}{space 2}  .028068{col 37}{space 1}   -1.46{col 46}{space 3}0.146{col 54}{space 4}-.0959275{col 67}{space 3}  .014229
+{txt}{space 5}lnfloat {c |}{col 14}{res}{space 2}-.3888166{col 26}{space 2}  .128715{col 37}{space 1}   -3.02{col 46}{space 3}0.003{col 54}{space 4}-.6413961{col 67}{space 3}-.1362372
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{help ivreg2##overidtests:Hansen J statistic} (overidentification test of all instruments):{res}{col 71}  23.139
+{txt}{col 52}Chi-sq({res}1{txt}) P-val =  {res}{col 73}0.0000
+{txt}{hline 78}
+Included instruments:{col 23}passive_y lnmktcap lnfloat
+Excluded instruments:{col 23}r2000
+{help ivreg2##partial:Partialled-out}:{col 23}_cons
+{col 23}nb: total SS, model F and R2s are after partialling-out;
+{col 23}    any {help ivreg2##s_small:small-sample adjustments} include partialled-out
+{col 23}    variables in regressor count K
+Duplicates:{col 23}passive_y
+{hline 78}
+{res}
+{txt}Absorbed degrees of freedom:
+{res}{col 1}{text}{hline 13}{c TT}{hline 12}{hline 12}{hline 14}{hline 1}{c TRC}
+{col 1}{text} Absorbed FE{col 14}{c |} Categories{col 27} - Redundant{col 39}  = Num. Coefs{col 54}{c |}
+{res}{col 1}{text}{hline 13}{c +}{hline 12}{hline 12}{hline 14}{hline 1}{c RT}
+{col 1}{text}        year{col 14}{c |}{space 1}        5{col 27}{space 1}        0{col 39}{result}{space 1}        5{col 53}{text} {col 54}{c |}
+{res}{col 1}{text}{hline 13}{c BT}{hline 12}{hline 12}{hline 14}{hline 1}{c BRC}
+{res}
+{com}. 
+. * Column (2)
+
+. 
+. ivreghdfe dual_y passive_y lnmktcap lnmktcap2 lnfloat (passive_y=r2000), absorb(year) vce(cluster cusip_merge)
+{res}{txt}Warning - duplicate variables detected
+Duplicates:{col 21}passive_y
+{res}{txt}({browse "http://scorreia.com/research/hdfe.pdf":MWFE estimator} converged in 1 iterations)
+{res}
+{txt}OLS estimation
+{hline 14}
+
+Estimates efficient for homoskedasticity only
+Statistics robust to heteroskedasticity and clustering on cusip_merge
+
+Number of clusters (cusip_merge) = {col 33}{res}  1011{txt}{col 55}Number of obs = {res}    1728
+{txt}{col 55}F(  4,  1010) = {res}    3.69
+{txt}{col 55}Prob > F      = {res}  0.0054
+{txt}Total (centered) SS     = {res} 1719.635011{txt}{col 55}Centered R2   = {res}  0.0206
+{txt}Total (uncentered) SS   = {res} 1719.635011{txt}{col 55}Uncentered R2 = {res}  0.0206
+{txt}Residual SS             = {res} 1684.198317{txt}{col 55}Root MSE      = {res}   .9898
+
+{txt}{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}      dual_y{col 14}{c |} Coefficient{col 26}  std. err.{col 38}      t{col 46}   P>|t|{col 54}     [95% con{col 67}f. interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}passive_y {c |}{col 14}{res}{space 2} .0062114{col 26}{space 2} .0226985{col 37}{space 1}    0.27{col 46}{space 3}0.784{col 54}{space 4}-.0383303{col 67}{space 3} .0507531
+{txt}{space 4}lnmktcap {c |}{col 14}{res}{space 2}-.5724133{col 26}{space 2} .4262052{col 37}{space 1}   -1.34{col 46}{space 3}0.180{col 54}{space 4}-1.408762{col 67}{space 3} .2639357
+{txt}{space 3}lnmktcap2 {c |}{col 14}{res}{space 2} .0118049{col 26}{space 2}  .009302{col 37}{space 1}    1.27{col 46}{space 3}0.205{col 54}{space 4}-.0064485{col 67}{space 3} .0300584
+{txt}{space 5}lnfloat {c |}{col 14}{res}{space 2}-.3828645{col 26}{space 2} .1287614{col 37}{space 1}   -2.97{col 46}{space 3}0.003{col 54}{space 4}-.6355349{col 67}{space 3} -.130194
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{help ivreg2##overidtests:Hansen J statistic} (overidentification test of all instruments):{res}{col 71}  23.742
+{txt}{col 52}Chi-sq({res}1{txt}) P-val =  {res}{col 73}0.0000
+{txt}{hline 78}
+Included instruments:{col 23}passive_y lnmktcap lnmktcap2 lnfloat
+Excluded instruments:{col 23}r2000
+{help ivreg2##partial:Partialled-out}:{col 23}_cons
+{col 23}nb: total SS, model F and R2s are after partialling-out;
+{col 23}    any {help ivreg2##s_small:small-sample adjustments} include partialled-out
+{col 23}    variables in regressor count K
+Duplicates:{col 23}passive_y
+{hline 78}
+{res}
+{txt}Absorbed degrees of freedom:
+{res}{col 1}{text}{hline 13}{c TT}{hline 12}{hline 12}{hline 14}{hline 1}{c TRC}
+{col 1}{text} Absorbed FE{col 14}{c |} Categories{col 27} - Redundant{col 39}  = Num. Coefs{col 54}{c |}
+{res}{col 1}{text}{hline 13}{c +}{hline 12}{hline 12}{hline 14}{hline 1}{c RT}
+{col 1}{text}        year{col 14}{c |}{space 1}        5{col 27}{space 1}        0{col 39}{result}{space 1}        5{col 53}{text} {col 54}{c |}
+{res}{col 1}{text}{hline 13}{c BT}{hline 12}{hline 12}{hline 14}{hline 1}{c BRC}
+{res}
+{com}. 
+. * Column (3)
+
+. 
+. ivreghdfe dual_y passive_y lnmktcap lnmktcap2 lnmktcap3 lnfloat (passive_y=r2000), absorb(year) vce(cluster cusip_merge)
+{res}{txt}Warning - duplicate variables detected
+Duplicates:{col 21}passive_y
+{res}{txt}({browse "http://scorreia.com/research/hdfe.pdf":MWFE estimator} converged in 1 iterations)
+{res}
+{txt}OLS estimation
+{hline 14}
+
+Estimates efficient for homoskedasticity only
+Statistics robust to heteroskedasticity and clustering on cusip_merge
+
+Number of clusters (cusip_merge) = {col 33}{res}  1011{txt}{col 55}Number of obs = {res}    1728
+{txt}{col 55}F(  5,  1010) = {res}    3.06
+{txt}{col 55}Prob > F      = {res}  0.0096
+{txt}Total (centered) SS     = {res} 1719.635011{txt}{col 55}Centered R2   = {res}  0.0213
+{txt}Total (uncentered) SS   = {res} 1719.635011{txt}{col 55}Uncentered R2 = {res}  0.0213
+{txt}Residual SS             = {res} 1683.077622{txt}{col 55}Root MSE      = {res}   .9898
+
+{txt}{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}      dual_y{col 14}{c |} Coefficient{col 26}  std. err.{col 38}      t{col 46}   P>|t|{col 54}     [95% con{col 67}f. interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}passive_y {c |}{col 14}{res}{space 2} .0070759{col 26}{space 2} .0226424{col 37}{space 1}    0.31{col 46}{space 3}0.755{col 54}{space 4}-.0373556{col 67}{space 3} .0515075
+{txt}{space 4}lnmktcap {c |}{col 14}{res}{space 2}-2.534308{col 26}{space 2} 2.466308{col 37}{space 1}   -1.03{col 46}{space 3}0.304{col 54}{space 4}-7.373983{col 67}{space 3} 2.305367
+{txt}{space 3}lnmktcap2 {c |}{col 14}{res}{space 2} .0977924{col 26}{space 2} .1018249{col 37}{space 1}    0.96{col 46}{space 3}0.337{col 54}{space 4}-.1020203{col 67}{space 3}  .297605
+{txt}{space 3}lnmktcap3 {c |}{col 14}{res}{space 2}-.0012461{col 26}{space 2} .0013889{col 37}{space 1}   -0.90{col 46}{space 3}0.370{col 54}{space 4}-.0039716{col 67}{space 3} .0014794
+{txt}{space 5}lnfloat {c |}{col 14}{res}{space 2}-.3823931{col 26}{space 2} .1288268{col 37}{space 1}   -2.97{col 46}{space 3}0.003{col 54}{space 4}-.6351919{col 67}{space 3}-.1295943
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{help ivreg2##overidtests:Hansen J statistic} (overidentification test of all instruments):{res}{col 71}  23.317
+{txt}{col 52}Chi-sq({res}1{txt}) P-val =  {res}{col 73}0.0000
+{txt}{hline 78}
+Included instruments:{col 23}passive_y lnmktcap lnmktcap2 lnmktcap3 lnfloat
+Excluded instruments:{col 23}r2000
+{help ivreg2##partial:Partialled-out}:{col 23}_cons
+{col 23}nb: total SS, model F and R2s are after partialling-out;
+{col 23}    any {help ivreg2##s_small:small-sample adjustments} include partialled-out
+{col 23}    variables in regressor count K
+Duplicates:{col 23}passive_y
+{hline 78}
+{res}
+{txt}Absorbed degrees of freedom:
+{res}{col 1}{text}{hline 13}{c TT}{hline 12}{hline 12}{hline 14}{hline 1}{c TRC}
+{col 1}{text} Absorbed FE{col 14}{c |} Categories{col 27} - Redundant{col 39}  = Num. Coefs{col 54}{c |}
+{res}{col 1}{text}{hline 13}{c +}{hline 12}{hline 12}{hline 14}{hline 1}{c RT}
+{col 1}{text}        year{col 14}{c |}{space 1}        5{col 27}{space 1}        0{col 39}{result}{space 1}        5{col 53}{text} {col 54}{c |}
+{res}{col 1}{text}{hline 13}{c BT}{hline 12}{hline 12}{hline 14}{hline 1}{c BRC}
+{res}
+{com}.
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. log close
+      {txt}name:  {res}<unnamed>
+       {txt}log:  {res}C:\Users\lcyhk\Desktop\Assign2.smcl
+  {txt}log type:  {res}smcl
+ {txt}closed on:  {res}27 Feb 2024, 07:11:38
+{txt}{.-}
+{smcl}
+{txt}{sf}{ul off}
