@@ -1,2 +1,2 @@
 S12_populated missing data.ipynb is used to populate missing S12 values before May 2004.
-The do file is used to merge datasets and run regressions.
+The Data cleaning.do and Regression.do are used to merge datasets and run regressions.
