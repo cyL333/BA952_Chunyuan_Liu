@@ -1,1 +1,2 @@
-This is the log file.
+This folder includes two log files.
+One is for Data cleaning, and another is for Regression results.
